@@ -55,7 +55,7 @@ mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Marking duplicated for sample ${sample_id}")
 # mark duplicates with Picard
 run_MarkDuplicates.py ${genome_bam_file} \
-    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
+#    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
     ${output_prefix} \
     --output_dir ${output_dir}
 

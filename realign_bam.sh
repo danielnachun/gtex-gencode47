@@ -3,14 +3,6 @@
 # Set bash options for verbose output and to fail immediately on errors or if variables are undefined.
 set -o xtrace -o nounset -o pipefail -o errexit
 
-# example args
-# dir_prefix = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow
-# sample_id = GTEX-1A3MV-0005-SM-7PC1O
-# reference_fasta = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/reference.fasta
-# rsem_ref_dir = ??
-# star_index = ??
-
-
 check_for_file() {
     argument_name="${1}"
     file_path="${2}"
