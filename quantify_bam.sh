@@ -3,14 +3,73 @@
 # Set bash options for verbose output and to fail immediately on errors or if variables are undefined.
 set -o xtrace -o nounset -o pipefail -o errexit
 
+# sample args
+# dir_prefix = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow
+# sample_id = GTEX-1A3MV-0005-SM-7PC1O
+# reference_fasta = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/reference.fasta
+# chr_sizes = ??
+# genes_gtf = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/gencode.v47.genes.gtf
+# intervals_bed = ??
+# het_vcf = ??
 
-dir_prefix = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow
-sample_id = GTEX-1A3MV-0005-SM-7PC1O
-reference_fasta = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/reference.fasta
-chr_sizes = ??
-genes_gtf = /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/gencode.v47.genes.gtf
-intervals_bed = ??
-het_vcf = ??
+check_for_file() {
+    argument_name="${1}"
+    file_path="${2}"
+    if [[ ${file_path} != "none" ]] && [[ ! -f ${file_path} ]]; then
+        echo "Error: file ${file_path} passed with ${argument_name} does not exist."
+        exit 1
+    fi
+}
+
+check_for_directory() {
+    argument_name="${1}"
+    directory_path="${2}"
+    if [[ ${directory_path} != "none" ]] && [[ ! -d ${directory_path} ]]; then
+        echo "Error: directory ${directory_path} passed with ${argument_name} does not exist."
+        exit 1
+    fi
+}
+
+options_array=(
+    dir_prefix
+    sample_id
+    reference_fasta
+    chr_sizes
+    genes_gtf
+    intervals_bed
+    het_vcf
+)
+
+longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
+
+# Parse command line arguments with getopt
+arguments=$(getopt --options a --longoptions "${longoptions}" --name 'bam_process' -- "$@")
+eval set -- "${arguments}"
+
+while true; do
+    case "${1}" in
+        --dir_prefix )
+            dir_prefix="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --sample_id )
+            sample_id="${2}"; shift 2 ;;
+        --reference_fasta )
+            reference_fasta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --chr_sizes )
+            chr_sizes="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --genes_gtf )
+            genes_gtf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --intervals_bed )
+            intervals_bed="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --het_vcf )
+            het_vcf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --)
+            shift; break;;
+        * )
+            echo "Invalid argument ${1} ${2}" >&2
+            exit 1
+    esac
+done
+
 
 
 # run rnaseq qc
@@ -35,8 +94,8 @@ run_gatk.sh --sample_id ${sample_id} \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --output_dir ${dir_prefix}/output/gatk
 
-# run leafcutter
-run_leafcutter.sh --sample_id ${sample_id} \
+# run regtools
+run_regtools.sh --sample_id ${sample_id} \
     --dir_prefix ${dir_prefix} \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --output_dir ${dir_prefix}/output/leafcutter

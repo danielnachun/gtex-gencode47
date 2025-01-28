@@ -73,7 +73,7 @@ echo $(date +"[%b %d %H:%M:%S] Running phASER")
 
 # this was being called with python 2.7
 
-python2.7 phaser/wrapper.py phase ${sample_id} ./bam_staging/*.bam \
+phaser_wrapper.py phase ${sample_id} ./bam_staging/*.bam \
     ${genotype_vcf} ${gene_model_bed} .  \
     ${"--haplo-count-blacklist=" + haplotype_blacklist_bed} \
     ${"--blacklist=" + phaser_blacklist_bed} \

@@ -60,7 +60,7 @@ pixi shell
 mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] getting fastqs for ${sample_id}")
 run_SamToFastq.py ${bam_file} \
-    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
+#    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
     -p ${sample_id} \
     --reference_fasta ${reference_fasta} \
     --output_dir ${output_dir} \

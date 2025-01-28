@@ -64,7 +64,7 @@ while true; do
 done
 
 # process bams to fastqs
-run_bam_to_fastq.sh --bam_file ${dir_prefix}/data/old_bams/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
+run_bam_to_fastq.sh --bam_file ${dir_prefix}/data/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${reference_fasta} \
     --output_dir ${dir_prefix}/tmp/fastq
