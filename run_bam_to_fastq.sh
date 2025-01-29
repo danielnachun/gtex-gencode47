@@ -25,7 +25,7 @@ options_array=(
     bam_file
     sample_id
     reference_fasta
-    output_dir
+    tmp_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -42,8 +42,8 @@ while true; do
             sample_id="${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --output_dir )
-            output_dir="${2}"; shift 2 ;;
+        --tmp_dir )
+            tmp_dir="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -52,24 +52,15 @@ while true; do
     esac
 done
 
-pixi shell
-
 # question: do we have to make the output dir first? 
 # or is that handled by the script which will call this script?
 
-mkdir -p ${output_dir}
+mkdir -p ${tmp_dir}
 echo $(date +"[%b %d %H:%M:%S] getting fastqs for ${sample_id}")
 run_SamToFastq.py ${bam_file} \
 #    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
     -p ${sample_id} \
     --reference_fasta ${reference_fasta} \
-    --output_dir ${output_dir} \
+    --output_dir ${tmp_dir} \
     --memory 64
 echo $(date +"[%b %d %H:%M:%S] Done")
-
-# run_SamToFastq.py /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/data/test_bams/GTEX-1A3MV-0005-SM-7PC1O.Aligned.sortedByCoord.out.patched.md.bam \
-#     --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
-#     -p GTEX-1A3MV-0005-SM-7PC1O \
-#     --reference_fasta /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta \
-#     --output_dir /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/tmp/fastq \
-#     --memory 64

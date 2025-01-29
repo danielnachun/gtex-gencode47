@@ -55,8 +55,6 @@ while true; do
     esac
 done
 
-pixi shell
-
 mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] calculating coverage for ${sample_id}")
 # calculate coverage

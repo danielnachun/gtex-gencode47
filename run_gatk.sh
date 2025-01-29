@@ -58,8 +58,6 @@ while true; do
     esac
 done
 
-pixi shell
- 
 mkdir -p ${dir_prefix}/tmp/filtered_gatk_bam/
 mkdir -p ${output_dir}
 

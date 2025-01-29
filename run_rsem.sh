@@ -52,8 +52,6 @@ while true; do
     esac
 done
 
-pixi shell
-
 mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Running RSEM for ${sample_id}")
 # RSEM transcript quantification

@@ -22,10 +22,10 @@ check_for_directory() {
 }
 
 options_array=(
-    duplicate_marked_bam
-    genes_gtf
-    genome_fasta
+    initial_bam_file
+    star_aligned_bam
     sample_id
+    tmp_dir
     output_dir
 )
 
@@ -37,14 +37,14 @@ eval set -- "${arguments}"
 
 while true; do
     case "${1}" in
-        --duplicate_marked_bam )
-            duplicate_marked_bam="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --genes_gtf )
-            genes_gtf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --genome_fasta )
-            genome_fasta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --initial_bam_file )
+            initial_bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --star_aligned_bam )
+            star_aligned_bam="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --sample_id )
             sample_id="${2}"; shift 2 ;;
+        --tmp_dir )
+            tmp_dir="${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --)
@@ -55,21 +55,11 @@ while true; do
     esac
 done
 
+mkdir -p ${tmp_dir}
 mkdir -p ${output_dir}
-echo $(date +"[%b %d %H:%M:%S] Generating QC for ${sample_id}")
-# run RNA-SeQC
-run_rnaseqc.py \
-    ${duplicate_marked_bam} \
-    ${genes_gtf} \
-    ${genome_fasta} \
-    ${sample_id} \
-    --output_dir ${output_dir}
-echo $(date +"[%b %d %H:%M:%S] Done")
 
-# question: the correct gtf?
-# run_rnaseqc.py \
-#     /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/data/output/genomebam/GTEX-1A3MV-0005-SM-7PC1O.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/gencode.v47.genes.gtf \
-#     /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/references/Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta \
-#     GTEX-1A3MV-0005-SM-7PC1O \
-#     --output_dir /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output/rnaseq_qc
+echo $(date +"[%b %d %H:%M:%S] Running bamsync")
+run_bamsync.sh ${initial_bam_file} ${star_aligned_bam} ${tmp_dir}/${sample_id}
+echo $(date +"[%b %d %H:%M:%S] Running samtools flagstat")
+samtools flagstat ${tmp_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.bam > ${output_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.bam.flagstat.txt
+echo $(date +"[%b %d %H:%M:%S] Done")

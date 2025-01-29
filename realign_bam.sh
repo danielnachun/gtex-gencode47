@@ -56,25 +56,36 @@ while true; do
 done
 
 # process bams to fastqs
-run_bam_to_fastq.sh --bam_file ${dir_prefix}/data/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
-    --sample_id ${sample_id} \
-    --reference_fasta ${reference_fasta} \
-    --output_dir ${dir_prefix}/tmp/fastq
+# bash ./run_bam_to_fastq.sh --bam_file ${dir_prefix}/data/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
+#     --sample_id ${sample_id} \
+#     --reference_fasta ${reference_fasta} \
+#     --tmp_dir ${dir_prefix}/tmp/fastq
 
 # align with star
-run_fastq_to_star.sh --star_index ${star_index} \
-    --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}.fastq.gz \
-    --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}.fastq.gz \
+bash ./run_fastq_to_star.sh \
+    --star_index ${star_index} \
+    --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
+    --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
     --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/tmp/star
+    --tmp_dir ${dir_prefix}/tmp/star
+
+# sync bams 
+bash ./run_bam_sync.sh \
+    --initial_bam_file ${dir_prefix}/data/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
+    --star_aligned_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.sortedByCoord.out.bam \
+    --sample_id ${sample_id} \
+    --tmp_dir ${dir_prefix}/tmp/bamsync \
+    --output_dir ${dir_prefix}/output/flagstat
 
 # mark duplicates, get the genome bam that we save
-run_mark_duplicates.sh --genome_bam_file ${dir_prefix}/tmp/star/${sample_id}.Aligned.sortedByCoord.out.patched.bam \
+bash ./run_mark_duplicates.sh \
+    --genome_bam_file ${dir_prefix}/tmp/bamsync/${sample_id}.Aligned.sortedByCoord.out.patched.bam \
     --output_prefix ${sample_id}.Aligned.sortedByCoord.out.patched.v11md \
     --output_dir ${dir_prefix}/output/genome_bam
 
 # run rsem, save isoform quantification
-run_rsem.sh --rsem_ref_dir ${rsem_ref_dir} \
+bash ./run_rsem.sh 
+    --rsem_ref_dir ${rsem_ref_dir} \
     --transcriptome_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.toTranscriptome.out.bam\
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/rsem

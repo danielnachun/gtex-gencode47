@@ -52,8 +52,6 @@ while true; do
     esac
 done
 
-pixi shell
-
 mkdir -p ${output_dir}
 mkdir -p ${dir_prefix}/tmp/filtered_leafcutter_bam/
 

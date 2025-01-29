@@ -49,8 +49,6 @@ while true; do
     esac
 done
 
-pixi shell
-
 mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Marking duplicated for sample ${sample_id}")
 # mark duplicates with Picard
