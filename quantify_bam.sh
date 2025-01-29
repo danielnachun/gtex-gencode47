@@ -29,7 +29,7 @@ options_array=(
     chr_sizes
     genes_gtf
     intervals_bed
-    het_vcf
+    vcf_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -52,8 +52,8 @@ while true; do
             genes_gtf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --intervals_bed )
             intervals_bed="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --het_vcf )
-            het_vcf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --vcf_dir )
+            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -65,29 +65,33 @@ done
 
 
 # run rnaseq qc
-run_rnaseq_qc.sh --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+run_rnaseq_qc.sh \
+    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
      --genes_gtf ${genes_gtf} \
      --genome_fasta ${reference_fasta} \
      --sample_id ${sample_id} \
      --output_dir ${dir_prefix}/output/rnaseq_qc
 
 # run coverage
-run_bam_to_coverage.sh --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+run_bam_to_coverage.sh \
+    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --chr_sizes ${chr_sizes} \
     --sample_id ${sample_id} \
     --intervals_bed ${intervals_bed} \
     --output_dir ${dir_prefix}/output/coverage
 
 # run gatk
-run_gatk.sh --sample_id ${sample_id} \
+run_gatk.sh \
+    --sample_id ${sample_id} \
     --dir_prefix ${dir_prefix} \
     --genome_fasta ${reference_fasta} \
-    --het_vcf ${het_vcf} \
+    --vcf_dir ${vcf_dir} \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --output_dir ${dir_prefix}/output/gatk
 
 # run regtools
-run_regtools.sh --sample_id ${sample_id} \
+run_regtools.sh \
+    --sample_id ${sample_id} \
     --dir_prefix ${dir_prefix} \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --output_dir ${dir_prefix}/output/leafcutter

@@ -25,7 +25,7 @@ options_array=(
     sample_id
     dir_prefix
     genome_fasta
-    het_vcf
+    vcf_dir
     duplicate_marked_bam
     output_dir
 )
@@ -44,8 +44,8 @@ while true; do
             dir_prefix="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --genome_fasta )
             genome_fasta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --het_vcf )
-            het_vcf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --vcf_dir )
+            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --duplicate_marked_bam )
             duplicate_marked_bam="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
@@ -65,10 +65,13 @@ mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Filtering out reads with allelic mapping bias")
 samtools view -h ${duplicate_marked_bam} | grep -v "vW:i:[2-7]" | samtools view -1 > ${dir_prefix}/tmp/filtered_gatk_bam/${sample_id}_filtered.bam
 samtools index ${dir_prefix}/tmp/filtered_gatk_bam/${sample_id}_filtered.bam
+
 echo $(date +"[%b %d %H:%M:%S] Running GATK on ${sample_id}")
+# get participant id for vcf
+participant_id=$(echo "${sample_id}" | awk -F'-' '{print $1 "-" $2}') 
 # dan will patch conda so gatk_jar is not needed
 run_GATK_ASEReadCounter.py ${genome_fasta} \
-    ${het_vcf} \
+    ${vcf_dir}/${participant_id}.snps.het.vcf.gz \
     ${dir_prefix}/tmp/filtered_gatk_bam/${sample_id}_filtered.bam \
     ${output_dir}/${sample_id}
 

@@ -60,10 +60,3 @@ run_MarkDuplicates.py ${genome_bam_file} \
 echo $(date +"[%b %d %H:%M:%S] Indexing for ${sample_id}")
 samtools index ${output_dir}/${output_prefix}.bam
 echo $(date +"[%b %d %H:%M:%S] Done")
-
-# run_MarkDuplicates.py \
-#        --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
-#         /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/tmp/star/GTEX-1A3MV-0005-SM-7PC1O.Aligned.sortedByCoord.out.patched.bam \
-#         GTEX-1A3MV-0005-SM-7PC1O.Aligned.sortedByCoord.out.patched.v11md \
-#         --output_dir oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output/genomebam
-
