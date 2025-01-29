@@ -55,6 +55,8 @@ while true; do
     esac
 done
 
+#TODO finish converting this script from widdle to bash
+
 # echo $(date +"[%b %d %H:%M:%S] Preparing indices")
 # for index in ${sep=" " bam_indices}; do
 #     touch $index

@@ -91,7 +91,3 @@ run_regtools.sh --sample_id ${sample_id} \
     --dir_prefix ${dir_prefix} \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --output_dir ${dir_prefix}/output/leafcutter
-
-# run phaser
-# TODO write wrapper
-
