@@ -64,16 +64,13 @@ done
 #     --reference_fasta ${reference_fasta} \
 #     --tmp_dir ${dir_prefix}/tmp/fastq
 
-# get participant id for vcf 
-
-TODO add vcf argument
 # align with star
 bash ./run_fastq_to_star.sh \
     --star_index ${star_index} \
     --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
     --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
     --sample_id ${sample_id} \
-    --vcf_dir ${vcf_dir}
+    --vcf_dir ${vcf_dir} \
     --tmp_dir ${dir_prefix}/tmp/star
 
 # sync bams 

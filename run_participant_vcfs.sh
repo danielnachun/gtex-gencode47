@@ -57,7 +57,7 @@ bcftools view --no-update -s ${participant_id} -v snps ${full_vcf_file} -Ou | bc
 tabix ${output_dir}/${participant_id}.snps.vcf.gz
 
 echo $(date +"[%b %d %H:%M:%S] Subsetting biallelic het sites for ASE")
-bcftools view --no-update -i 'GT="het"' ${output_dir}/${participant_id}.snps.vcf.gz -Ou | bcftools norm -m+ | bcftools view -m2 -M2 -Oz -o ${output_dir}/${participant_id}.snps.het.vcf.gz
+bcftools view --no-update -i 'GT="het"' ${output_dir}/${participant_id}.snps.vcf.gz -Ou | bcftools norm -m+ -Ou | bcftools view -m2 -M2 -Oz -o ${output_dir}/${participant_id}.snps.het.vcf.gz
 tabix ${output_dir}/${participant_id}.snps.het.vcf.gz
 
 echo $(date +"[%b %d %H:%M:%S] Done")
