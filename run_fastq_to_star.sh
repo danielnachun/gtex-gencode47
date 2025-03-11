@@ -26,7 +26,7 @@ options_array=(
     fastq_1
     fastq_2
     sample_id
-    vcf_dir
+    vcf_file
     tmp_dir
 )
 
@@ -46,8 +46,8 @@ while true; do
             fastq_2="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --sample_id )
             sample_id="${2}"; shift 2 ;;
-        --vcf_dir )
-            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --vcf_file )
+            vcf_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --tmp_dir )
             tmp_dir="${2}"; shift 2 ;;
         --)
@@ -60,16 +60,12 @@ done
 
 mkdir -p ${tmp_dir}
 echo $(date +"[%b %d %H:%M:%S] aligning ${sample_id} with STAR")
-# get participant id for vcf file
-participant_id=$(echo "${sample_id}" | awk -F'-' '{print $1 "-" $2}') 
 # align with STAR
 run_STAR.py ${star_index} \
-        ${fastq_1} \
-        ${fastq_2} \
-        ${sample_id} \
-        --threads 4 \
-        --output_dir ${tmp_dir} \
-        --varVCFfile  ${vcf_dir}/${participant_id}.snps.vcf.gz
+    ${fastq_1} \
+    ${fastq_2} \
+    ${sample_id} \
+    --threads 1 \
+    --output_dir ${tmp_dir} \
+    --varVCFfile ${vcf_file}
 echo $(date +"[%b %d %H:%M:%S] Done")
-
-# TODO: where is the vcf??

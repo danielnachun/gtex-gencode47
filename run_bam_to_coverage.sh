@@ -25,7 +25,6 @@ options_array=(
     duplicate_marked_bam
     chr_sizes
     sample_id
-    intervals_bed
     output_dir
 )
 
@@ -43,8 +42,6 @@ while true; do
             chr_sizes="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --sample_id )
             sample_id="${2}"; shift 2 ;;
-        --intervals_bed )
-            intervals_bed="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --)
@@ -61,18 +58,6 @@ echo $(date +"[%b %d %H:%M:%S] calculating coverage for ${sample_id}")
 bam2coverage.py \
     ${duplicate_marked_bam} \
     ${chr_sizes} \
-    ${sample_id} \
-    ${"--intersect " + intervals_bed} \
+    ${output_dir}/${sample_id} \
     --output_dir ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Done")
-
-
-# question: what is the intervals bed?
-
-# bam2coverage.py \
-#     /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output/genomebam/GTEX-1A3MV-0005-SM-7PC1O.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     ${chr_sizes} \
-#     GTEX-1A3MV-0005-SM-7PC1O \
-#     ${"--intersect " + intervals_bed} \
-#     --output_dir /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output/coverage
-

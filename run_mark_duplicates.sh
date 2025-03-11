@@ -50,13 +50,14 @@ while true; do
 done
 
 mkdir -p ${output_dir}
-echo $(date +"[%b %d %H:%M:%S] Marking duplicated for sample ${sample_id}")
+echo $(date +"[%b %d %H:%M:%S] Marking duplicates for sample ${genome_bam_file}")
 # mark duplicates with Picard
+export _JAVA_OPTIONS="-Xmx64g"
 run_MarkDuplicates.py ${genome_bam_file} \
-#    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
     ${output_prefix} \
     --output_dir ${output_dir}
 
-echo $(date +"[%b %d %H:%M:%S] Indexing for ${sample_id}")
+echo $(date +"[%b %d %H:%M:%S] Indexing for ${genome_bam_file}")
+mv ${output_dir}/$(basename ${genome_bam_file/patched/patched.md}) ${output_dir}/${output_prefix}.bam
 samtools index ${output_dir}/${output_prefix}.bam
 echo $(date +"[%b %d %H:%M:%S] Done")

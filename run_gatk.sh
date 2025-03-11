@@ -69,7 +69,6 @@ samtools index ${dir_prefix}/tmp/filtered_gatk_bam/${sample_id}_filtered.bam
 echo $(date +"[%b %d %H:%M:%S] Running GATK on ${sample_id}")
 # get participant id for vcf
 participant_id=$(echo "${sample_id}" | awk -F'-' '{print $1 "-" $2}') 
-# dan will patch conda so gatk_jar is not needed
 run_GATK_ASEReadCounter.py ${genome_fasta} \
     ${vcf_dir}/${participant_id}.snps.het.vcf.gz \
     ${dir_prefix}/tmp/filtered_gatk_bam/${sample_id}_filtered.bam \

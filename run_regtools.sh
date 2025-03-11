@@ -60,5 +60,5 @@ echo $(date +"[%b %d %H:%M:%S] Extracting junctions for sample ${sample_id}")
 samtools view -h -q 255 ${duplicate_marked_bam} | grep -v "vW:i:[2-7]" | samtools view -b > ${dir_prefix}/tmp/filtered_leafcutter_bam/${sample_id}_filtered.bam
 samtools index ${dir_prefix}/tmp/filtered_leafcutter_bam/${sample_id}_filtered.bam
 # run leafcutter
-regtools junctions extract -a 8 -m 50 -M 500000 -s 0 ${dir_prefix}/tmp/filtered_leafcutter_bam/${sample_id}_filtered.bam | gzip -c > ${output_dir}/${sample_id}.regtools_junc.txt.gz
+regtools junctions extract -a 8 -m 50 -M 500000 -s XS ${dir_prefix}/tmp/filtered_leafcutter_bam/${sample_id}_filtered.bam | gzip -c > ${output_dir}/${sample_id}.regtools_junc.txt.gz
 echo $(date +"[%b %d %H:%M:%S] Done")

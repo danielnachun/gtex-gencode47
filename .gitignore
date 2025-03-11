@@ -4,3 +4,7 @@ pixi.lock
 .pixi
 .rattler
 *.egg-info
+
+# pixi environments
+.pixi
+*.egg-info

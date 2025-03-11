@@ -52,13 +52,10 @@ while true; do
     esac
 done
 
-# question: do we have to make the output dir first? 
-# or is that handled by the script which will call this script?
-
 mkdir -p ${tmp_dir}
 echo $(date +"[%b %d %H:%M:%S] getting fastqs for ${sample_id}")
+export _JAVA_OPTIONS="-Xmx64g"
 run_SamToFastq.py ${bam_file} \
-#    --jar $(pwd)/.pixi/envs/default/share/picard-2.27.1-0/picard.jar \
     -p ${sample_id} \
     --reference_fasta ${reference_fasta} \
     --output_dir ${tmp_dir} \
