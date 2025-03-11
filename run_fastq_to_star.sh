@@ -65,7 +65,31 @@ run_STAR.py ${star_index} \
     ${fastq_1} \
     ${fastq_2} \
     ${sample_id} \
-    --threads 1 \
     --output_dir ${tmp_dir} \
+    --outFilterMultimapNmax 20 \
+    --alignSJoverhangMin 8 \
+    --alignSJDBoverhangMin 1 \
+    --outFilterMismatchNmax 999 \
+    --outFilterMismatchNoverLmax 0.1 \
+    --alignIntronMin 20 \
+    --alignIntronMax 1000000 \
+    --alignMatesGapMax 1000000 \
+    --outFilterType BySJout \
+    --outFilterScoreMinOverLread 0.33 \
+    --outFilterMatchNminOverLread 0.33 \
+    --limitSjdbInsertNsj 1200000 \
+    --outSAMstrandField intronMotif \
+    --outFilterIntronMotifs None \
+    --alignSoftClipAtReferenceEnds Yes \
+    --quantMode TranscriptomeSAM GeneCounts \
+    --outSAMattrRGline ID:rg1 SM:sm1 \
+    --outSAMattributes NH HI AS nM NM ch \
     --varVCFfile ${vcf_file}
+    --waspOutputMode SAMtag \
+    --chimSegmentMin 15 \
+    --chimJunctionOverhangMin 15 \
+    --chimOutType Junctions WithinBAM SoftClip \
+    --chimMainSegmentMultNmax 1 \
+    --threads 1 \
+
 echo $(date +"[%b %d %H:%M:%S] Done")
