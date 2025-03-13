@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # sample args
-bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output_francois/sample_bams/
+bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output_francois/genome_bam
 reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/references
 reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta
 chr_sizes=GRCh38.chrsizes

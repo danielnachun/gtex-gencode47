@@ -84,7 +84,7 @@ run_STAR.py ${star_index} \
     --quantMode TranscriptomeSAM GeneCounts \
     --outSAMattrRGline ID:rg1 SM:sm1 \
     --outSAMattributes NH HI AS nM NM ch \
-    --varVCFfile ${vcf_file}
+    --varVCFfile ${vcf_file} \
     --waspOutputMode SAMtag \
     --chimSegmentMin 15 \
     --chimJunctionOverhangMin 15 \
