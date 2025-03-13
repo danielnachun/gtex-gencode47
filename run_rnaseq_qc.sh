@@ -61,10 +61,12 @@ done
 mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Generating QC for ${sample_id}")
 # run RNA-SeQC
-run_rnaseqc.py \
+rnaseqc \
     ${genes_gtf} \
     ${duplicate_marked_bam} \
-    ${sample_id} \
+    ${output_dir} \
+    -s ${sample_id} \
     --bed ${intervals_bed} \
-    --output_dir ${output_dir}
+    --fasta ${genome_fasta} \
+    -vv
 echo $(date +"[%b %d %H:%M:%S] Done")
