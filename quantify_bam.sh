@@ -68,19 +68,25 @@ while true; do
     esac
 done
 
+# activate the pixi enviroment
 source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)
 
-dir_prefix=${TMPDIR}
-vcf_dir_tmp=${dir_prefix}/vcfs
-mkdir -p ${vcf_dir_tmp}
-mkdir -p ${dir_prefix}/output/genome_bam
-mkdir -p ${dir_prefix}/tmp
 
+# map job id to line number and then to sample id
 line_number=${SLURM_ARRAY_TASK_ID}
 bam_file="$(sed "${line_number}q; d" "${bam_list}")"
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 vcf_file=${participant_id}.snps.vcf.gz
+
+# make tmp dir
+dir_prefix=${TMPDIR}/${sample_id}
+vcf_dir_tmp=${dir_prefix}/vcfs
+mkdir -p ${vcf_dir_tmp}
+mkdir -p ${dir_prefix}/output/genome_bam
+mkdir -p ${dir_prefix}/tmp
+
+# copy references and data to temop direcotry in compute node
 rsync -PrhLtv ${reference_dir} ${dir_prefix}
 rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
 rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}

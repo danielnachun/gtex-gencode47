@@ -3,7 +3,7 @@
 #set -o xtrace -o nounset -o errexit
 
 # sample args
-old_dir=/home/klawren/oak/gtex/test_workflow/output_kate
+old_dir=/home/klawren/oak/gtex/test_workflow/output_fixed_rnaseqqc
 new_dir=/home/klawren/oak/gtex/test_workflow/output_francois
 #new_dir=/home/klawren/oak/gtex/test_workflow/output_francois
 
@@ -14,31 +14,29 @@ new_dir=/home/klawren/oak/gtex/test_workflow/output_francois
 
 
 
-sample_id=GTEX-1C4CL-2126-SM-7IGQC
-#sample_id=GTEX-YFCO-0626-SM-HM8UJ
+#sample_id=GTEX-1C4CL-2126-SM-7IGQC
+sample_id=GTEX-YFCO-0626-SM-HM8UJ
 
 #diff --speed-large-files <(zcat /home/klawren/oak/gtex/test_workflow/output_francois/fa-exchange2/GTEX-YFCO.snps.vcf.gz) <(zcat /home/klawren/oak/gtex/data/processed/vcfs/GTEX-YFCO.snps.vcf.gz)
 
 
-# check for gatk
-diff <(zcat ${old_dir}/gatk/${sample_id}.readcounts.txt.gz) <(zcat ${new_dir}/gatk/${sample_id}.readcounts.txt.gz)
-diff <(zcat ${old_dir}/gatk/${sample_id}.readcounts.chrX.txt.gz) <(zcat ${new_dir}/gatk/${sample_id}.readcounts.chrX.txt.gz)
+# # check for gatk
+# diff <(zcat ${old_dir}/gatk/${sample_id}.readcounts.txt.gz) <(zcat ${new_dir}/gatk/${sample_id}.readcounts.txt.gz)
+# diff <(zcat ${old_dir}/gatk/${sample_id}.readcounts.chrX.txt.gz) <(zcat ${new_dir}/gatk/${sample_id}.readcounts.chrX.txt.gz)
 
-# check for leafcutter
-# ignore 4th column where junctions are named
-#diff <(zcat ${old_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz) <(zcat ${new_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz)
-diff <(zcat ${old_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz | awk '{$4=""; print $0}' | sed 's/  *$//') <(zcat ${new_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz | awk '{$4=""; print $0}' | sed 's/  *$//')
-
-
+# # check for leafcutter
+# # ignore 4th column where junctions are named
+# #diff <(zcat ${old_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz) <(zcat ${new_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz)
+# diff <(zcat ${old_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz | awk '{$4=""; print $0}' | sed 's/  *$//') <(zcat ${new_dir}/leafcutter/${sample_id}.regtools_junc.txt.gz | awk '{$4=""; print $0}' | sed 's/  *$//')
 
 
-# # # for rnaseq_qc
-# diff <(zcat ${old_dir}/rnaseq_qc/${sample_id}.exon_reads.gct.gz) <(zcat ${new_dir}/rnaseq_qc/${sample_id}.exon_reads.gct.gz)
-# diff ${old_dir}/rnaseq_qc/${sample_id}.fragmentSizes.txt ${new_dir}/rnaseq_qc/${sample_id}.fragmentSizes.txt
-# # diff ${old_dir}/rnaseq_qc/${sample_id}.gc_content.tsv ${new_dir}/rnaseq_qc/${sample_id}.gc_contenct.tsv
-# diff <(zcat ${old_dir}/rnaseq_qc/${sample_id}.gene_reads.gct.gz) <(zcat ${new_dir}/rnaseq_qc/${sample_id}.gene_reads.gct.gz)
-# diff <(zcat ${old_dir}/rnaseq_qc/${sample_id}.gene_tpm.gct.gz) <(zcat ${new_dir}/rnaseq_qc/${sample_id}.gene_tpm.gct.gz)
-#diff ${old_dir}/rnaseq_qc/${sample_id}.metrics.tsv ${new_dir}/rnaseq_qc/${sample_id}.metrics.tsv
+# # for rnaseq_qc
+diff <(zcat ${old_dir}/rnaseq_qc/${sample_id}.exon_reads.gct.gz) <(zcat ${new_dir}/rnaseq_qc/${sample_id}.exon_reads.gct.gz)
+diff ${old_dir}/rnaseq_qc/${sample_id}.fragmentSizes.txt ${new_dir}/rnaseq_qc/${sample_id}.fragmentSizes.txt
+diff ${old_dir}/rnaseq_qc/${sample_id}.gc_content.tsv ${new_dir}/rnaseq_qc/${sample_id}.gc_contenct.tsv
+diff <(zcat ${old_dir}/rnaseq_qc/${sample_id}.gene_reads.gct.gz) <(zcat ${new_dir}/rnaseq_qc/${sample_id}.gene_reads.gct.gz)
+diff <(zcat ${old_dir}/rnaseq_qc/${sample_id}.gene_tpm.gct.gz) <(zcat ${new_dir}/rnaseq_qc/${sample_id}.gene_tpm.gct.gz)
+diff ${old_dir}/rnaseq_qc/${sample_id}.metrics.tsv ${new_dir}/rnaseq_qc/${sample_id}.metrics.tsv
 
 
 # # Generate MD5 checksums for the decompressed files

@@ -67,11 +67,6 @@ done
 # activate the pixi enviroment
 source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
 
-dir_prefix=${TMPDIR}
-vcf_dir_tmp=${dir_prefix}/vcfs
-mkdir -p ${vcf_dir_tmp}
-mkdir -p ${dir_prefix}/raw
-mkdir -p ${dir_prefix}/tmp
 
 # map job id to line number and then to sample id
 line_number=${SLURM_ARRAY_TASK_ID}
@@ -79,6 +74,13 @@ bam_file="$(sed "${line_number}q; d" "${bam_list}")"
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 vcf_file=${participant_id}.snps.vcf.gz
+
+# make tmp dir
+dir_prefix=${TMPDIR}/${sample_id}
+vcf_dir_tmp=${dir_prefix}/vcfs
+mkdir -p ${vcf_dir_tmp}
+mkdir -p ${dir_prefix}/raw
+mkdir -p ${dir_prefix}/tmp
 
 # copy references and data to temop direcotry in compute node
 rsync -PrhLtv ${reference_dir} ${dir_prefix}
