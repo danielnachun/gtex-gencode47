@@ -69,4 +69,6 @@ rnaseqc \
     --bed ${intervals_bed} \
     --fasta ${genome_fasta} \
     -vv
+
+gzip ${output_dir}/*.gct
 echo $(date +"[%b %d %H:%M:%S] Done")

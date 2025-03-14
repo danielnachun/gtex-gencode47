@@ -25,7 +25,7 @@ bam_array_length=$(wc -l < ${bam_list})
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
     --array "1-${bam_array_length}%250" \
-    --time 6:00:00 \
+    --time 8:00:00 \
     --cpus-per-task 1 \
     --partition normal,owners \
     --mem 64G \
