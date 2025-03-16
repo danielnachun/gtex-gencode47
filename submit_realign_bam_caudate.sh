@@ -41,20 +41,20 @@ fi
 bam_array_length=$(wc -l < "${bam_list}")
 echo "BAM array length: ${bam_array_length}"
 
-# sbatch --output "${output_dir}/logs/%A_%a.log" \
-#     --error "${output_dir}/logs/%A_%a.log" \
-#     --array "1-${bam_array_length}%250" \
-#     --time 12:00:00 \
-#     --cpus-per-task 1 \
-#     --partition normal,owners \
-#     --mem 64G \
-#     --job-name realign_bam \
-#     ${code_dir}/realign_bam.sh \
-#         --reference_dir ${reference_dir} \
-#         --vcf_dir ${vcf_dir} \
-#         --output_dir ${output_dir} \
-#         --code_dir ${code_dir} \
-#         --bam_list ${bam_list} \
-#         --reference_fasta ${reference_fasta} \
-#         --rsem_ref_dir ${rsem_ref_dir} \
-#         --star_index ${star_index}
+sbatch --output "${output_dir}/logs/%A_%a.log" \
+    --error "${output_dir}/logs/%A_%a.log" \
+    --array "1-${bam_array_length}%250" \
+    --time 12:00:00 \
+    --cpus-per-task 1 \
+    --partition normal,owners \
+    --mem 64G \
+    --job-name realign_bam \
+    ${code_dir}/realign_bam.sh \
+        --reference_dir ${reference_dir} \
+        --vcf_dir ${vcf_dir} \
+        --output_dir ${output_dir} \
+        --code_dir ${code_dir} \
+        --bam_list ${bam_list} \
+        --reference_fasta ${reference_fasta} \
+        --rsem_ref_dir ${rsem_ref_dir} \
+        --star_index ${star_index}

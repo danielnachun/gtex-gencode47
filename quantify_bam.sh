@@ -77,7 +77,13 @@ line_number=${SLURM_ARRAY_TASK_ID}
 bam_file="$(sed "${line_number}q; d" "${bam_list}")"
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
+
 vcf_file=${participant_id}.snps.vcf.gz
+vcf_index=${participant_id}.snps.vcf.gz.tbi
+
+# check for vcf file and vcf file index
+check_for_file "vcf_file" "${vcf_dir}/${vcf_file}"
+check_for_file "vcf_index" "${vcf_dir}/${vcf_index}"
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}

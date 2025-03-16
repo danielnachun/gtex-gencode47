@@ -21,11 +21,12 @@ mkdir -p ${output_dir}/logs
 bam_list="$output_dir/realigned_bam_list"
 awk -v dir="$realign_bam_dir" '{print dir "/" $0 ".Aligned.sortedByCoord.out.patched.v11md.bam"}' "$gtex_ids" > "$bam_list"
 bam_array_length=$(wc -l < ${bam_list})
+echo "BAM array length: ${bam_array_length}"
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
     --array "1-${bam_array_length}%250" \
-    --time 1:00:00 \
+    --time 3:00:00 \
     --partition normal,owners \
     --cpus-per-task 1 \
     --mem 64G \
