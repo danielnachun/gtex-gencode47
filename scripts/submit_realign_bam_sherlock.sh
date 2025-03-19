@@ -2,16 +2,16 @@
 
 set -o xtrace -o nounset -o errexit
 
-# sample args
-bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/raw/GTEx_Analysis_2022-06-06_v10_RNAseq_BAM_files
-gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/caudate_shared_samples.txt
-reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/references
-reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta
-rsem_ref_dir=rsem_reference_GRCh38_gencode47
-star_index=STAR_genome_GRCh38_noALT_noHLA_noDecoy_v47_oh75
-vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/caudate_analysis/output/
-code_dir=$(realpath $(dirname ${BASH_SOURCE[0]}))
+# source the config file
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_caudate
+.sh"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file $CONFIG_FILE not found!"
+    exit 1
+fi
+
 
 # if true do all in gtex_ids
 # if false, do all in gtex ids that do not already have a genome_bam in the output folder

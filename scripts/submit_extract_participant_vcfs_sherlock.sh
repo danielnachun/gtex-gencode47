@@ -2,18 +2,39 @@
 
 set -o xtrace -o nounset -o errexit
 
-# sample args
-full_vcf=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.vcf.gz
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
-participant_id_list=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/caudate_participants.txt
-code_dir=$(realpath $(dirname ${BASH_SOURCE[0]}))
-
+# source the config file
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/extract_vcfs_caudate.sh"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file $CONFIG_FILE not found!"
+    exit 1
+fi
 
 mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
 
 participant_id_length=$(wc -l < ${participant_id_list})
 echo "BAM array length: ${participant_id_length}"
+
+# check to see if vcf already exists
+snps_vcf="${output_dir}/${participant_id}.snps.vcf.gz"
+snps_vcf_index="${output_dir}/${participant_id}.snps.vcf.gz.tbi"
+het_vcf="${output_dir}/${participant_id}.snps.het.vcf.gz"
+het_vcf_index="${output_dir}/${participant_id}.snps.het.vcf.gz.tbi"
+
+check_file() {
+    [ -f "$1" ] && [ -s "$1" ]
+}
+
+# Check if all output files exist and are non-empty
+if check_file "$snps_vcf" && check_file "$snps_vcf_index" && \
+   check_file "$het_vcf" && check_file "$het_vcf_index"; then
+    echo "$(date +"[%b %d %H:%M:%S] All output files already exist. Skipping processing.")"
+    exit 0
+fi
+
+
 
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \

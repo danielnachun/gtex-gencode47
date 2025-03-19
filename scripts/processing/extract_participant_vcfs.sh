@@ -60,23 +60,6 @@ source <(pixi shell-hook --environment extractvcf --manifest-path ${code_dir}/pi
 line_number=${SLURM_ARRAY_TASK_ID}
 participant_id="$(sed "${line_number}q; d" "${participant_id_list}")"
 
-# check to see if vcf already exists
-snps_vcf="${output_dir}/${participant_id}.snps.vcf.gz"
-snps_vcf_index="${output_dir}/${participant_id}.snps.vcf.gz.tbi"
-het_vcf="${output_dir}/${participant_id}.snps.het.vcf.gz"
-het_vcf_index="${output_dir}/${participant_id}.snps.het.vcf.gz.tbi"
-
-check_file() {
-    [ -f "$1" ] && [ -s "$1" ]
-}
-
-# Check if all output files exist and are non-empty
-if check_file "$snps_vcf" && check_file "$snps_vcf_index" && \
-   check_file "$het_vcf" && check_file "$het_vcf_index"; then
-    echo "$(date +"[%b %d %H:%M:%S] All output files already exist. Skipping processing.")"
-    exit 0
-fi
-
 echo $(date +"[%b %d %H:%M:%S] Generating participant VCF (SNPs only)")
 # select SNPs, filter out missing sites
 bcftools view --no-update -s ${participant_id} -v snps ${full_vcf} -Ou | bcftools view --no-update -e 'GT=".|."' -Oz -o ${output_dir}/${participant_id}.snps.vcf.gz

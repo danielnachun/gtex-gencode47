@@ -2,17 +2,14 @@
 
 set -o xtrace -o nounset -o errexit
 
-# sample args
-realign_bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/caudate_analysis/output/genome_bam
-gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/caudate_shared_samples.txt
-reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/references
-reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta
-chr_sizes=GRCh38.chrsizes
-genes_gtf=gencode.v47.genes.gtf
-intervals_bed=gencode.v47.GRCh38.insert_size_intervals_geq1000bp.bed
-vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/caudate_analysis/output/
-code_dir=$(realpath $(dirname ${BASH_SOURCE[0]}))
+# source the config file
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate.sh"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file $CONFIG_FILE not found!"
+    exit 1
+fi
 
 # if true do all in gtex_ids
 # if false, do all in gtex ids that do not already have a regtools output in the leafcutter folder (that is the last step)

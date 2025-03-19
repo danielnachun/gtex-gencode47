@@ -2,15 +2,15 @@
 
 set -o xtrace -o nounset -o errexit
 
-# sample args
-bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/test_samples
-reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/references
-reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta
-rsem_ref_dir=rsem_reference_GRCh38_gencode47
-star_index=STAR_genome_GRCh38_noALT_noHLA_noDecoy_v47_oh75
-vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/output_kate/
-code_dir=$(realpath $(dirname ${BASH_SOURCE[0]}))
+# source the config file
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_test_bams.sh"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file $CONFIG_FILE not found!"
+    exit 1
+fi
+
 
 bam_list="${bam_dir}/../bam_list"
 find -L "${bam_dir}" -type f -name "*.bam" | sort -u | head -n 10 > ${bam_list}

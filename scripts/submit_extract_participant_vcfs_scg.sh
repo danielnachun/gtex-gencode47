@@ -2,12 +2,14 @@
 
 set -o xtrace -o nounset -o errexit
 
-# sample args
-full_vcf=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.vcf.gz
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcf_scg
-participant_id_list=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/test_participants.txt
-code_dir=$(realpath $(dirname ${BASH_SOURCE[0]}))
-
+# source the config file
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/extract_vcfs_caudate.sh"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file $CONFIG_FILE not found!"
+    exit 1
+fi
 
 mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
