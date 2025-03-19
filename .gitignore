@@ -1,4 +1,3 @@
-
 # pixi environments
 pixi.lock
 .pixi
@@ -8,3 +7,8 @@ pixi.lock
 # pixi environments
 .pixi
 *.egg-info
+
+# data and output
+data/*
+trash/*
+output/*

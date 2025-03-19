@@ -25,6 +25,7 @@ options_array=(
     participant_id_list
     full_vcf
     output_dir
+    code_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -41,6 +42,8 @@ while true; do
             full_vcf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
+        --code_dir )
+            code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -57,6 +60,22 @@ source <(pixi shell-hook --environment extractvcf --manifest-path ${code_dir}/pi
 line_number=${SLURM_ARRAY_TASK_ID}
 participant_id="$(sed "${line_number}q; d" "${participant_id_list}")"
 
+# check to see if vcf already exists
+snps_vcf="${output_dir}/${participant_id}.snps.vcf.gz"
+snps_vcf_index="${output_dir}/${participant_id}.snps.vcf.gz.tbi"
+het_vcf="${output_dir}/${participant_id}.snps.het.vcf.gz"
+het_vcf_index="${output_dir}/${participant_id}.snps.het.vcf.gz.tbi"
+
+check_file() {
+    [ -f "$1" ] && [ -s "$1" ]
+}
+
+# Check if all output files exist and are non-empty
+if check_file "$snps_vcf" && check_file "$snps_vcf_index" && \
+   check_file "$het_vcf" && check_file "$het_vcf_index"; then
+    echo "$(date +"[%b %d %H:%M:%S] All output files already exist. Skipping processing.")"
+    exit 0
+fi
 
 echo $(date +"[%b %d %H:%M:%S] Generating participant VCF (SNPs only)")
 # select SNPs, filter out missing sites

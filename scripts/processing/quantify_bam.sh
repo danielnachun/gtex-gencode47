@@ -85,6 +85,10 @@ vcf_index=${participant_id}.snps.vcf.gz.tbi
 check_for_file "vcf_file" "${vcf_dir}/${vcf_file}"
 check_for_file "vcf_index" "${vcf_dir}/${vcf_index}"
 
+# check for bam file
+check_for_file "bam_file" "${bam_file}"
+check_for_file "bam_file_index" "${bam_file}.bai"
+
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
 vcf_dir_tmp=${dir_prefix}/vcfs

@@ -11,7 +11,7 @@ rsem_ref_dir=rsem_reference_GRCh38_gencode47
 star_index=STAR_genome_GRCh38_noALT_noHLA_noDecoy_v47_oh75
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/caudate_analysis/output/
-code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/test_workflow/code
+code_dir=$(realpath $(dirname ${BASH_SOURCE[0]}))
 
 # if true do all in gtex_ids
 # if false, do all in gtex ids that do not already have a genome_bam in the output folder
