@@ -15,7 +15,7 @@ fi
 
 # if true do all in gtex_ids
 # if false, do all in gtex ids that do not already have a genome_bam in the output folder
-regenerate_all=flase
+regenerate_all=false
 
 # make a bam list
 mkdir -p ${output_dir}
@@ -38,12 +38,19 @@ else
     done < "$gtex_ids"
 fi
 
-bam_array_length=$(wc -l < "${bam_list}")
-echo "BAM array length: ${bam_array_length}"
+
+original_count=$(wc -l < "${gtex_ids}")
+to_process_count=$(wc -l < "${bam_list}")
+completed_count=$((original_count - to_process_count))
+echo "Original sample count: ${original_count}"
+echo "Already completed: ${completed_count}"
+echo "To be processed: ${to_process_count}"
+
+
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
-    --array "1-${bam_array_length}%250" \
+    --array "1-${to_process_count}%250" \
     --time 12:00:00 \
     --cpus-per-task 1 \
     --partition normal,owners \
