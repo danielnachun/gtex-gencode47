@@ -135,7 +135,7 @@ bash ${code_dir}/run_mark_duplicates.sh \
     --output_dir ${dir_prefix}/output/genome_bam
 
 # run rsem, save isoform quantification
-bash ./run_rsem.sh \
+bash ${code_dir}/run_rsem.sh \
     --rsem_ref_dir ${dir_prefix}/references/${rsem_ref_dir} \
     --transcriptome_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.toTranscriptome.out.bam \
     --sample_id ${sample_id} \
