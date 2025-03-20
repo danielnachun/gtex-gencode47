@@ -65,7 +65,14 @@ while true; do
 done
 
 # activate the pixi enviroment
-source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
+#source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
+
+# Try to activate pixi environment
+if ! eval "$(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)"; then
+    echo "Error: Failed to activate pixi environment"
+    echo "Please check environment setup and try again"
+    exit 1
+fi
 
 
 # map job id to line number and then to sample id
@@ -92,7 +99,7 @@ mkdir -p ${dir_prefix}/raw
 mkdir -p ${dir_prefix}/tmp
 
 # copy references and data to temop direcotry in compute node
-rsync -PrhLtv ${reference_dir} ${dir_prefix}
+rsync -PrhLtv ${reference_dir}/* ${dir_prefix}/references/
 rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
 rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 rsync -PrhLtv ${bam_file} ${dir_prefix}/raw
