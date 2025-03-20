@@ -11,6 +11,13 @@ else
     exit 1
 fi
 
+# Check for duplicates in participant_id_list, duplicated can cuase errors as files colide
+if [ $(sort "${participant_id_list}" | uniq -d | wc -l) -gt 0 ]; then
+    echo "Error: Duplicate entries found in ${participant_id_list}:"
+    sort "${participant_id_list}" | uniq -d
+    exit 1
+fi
+
 # if true do all in participant_id_list
 # if false, do all in participant_id_list that do not already vcfs and vcf indexs
 regenerate_all=false
@@ -56,8 +63,6 @@ completed_count=$((original_count - to_process_count))
 echo "Original participant count: ${original_count}"
 echo "Already completed: ${completed_count}"
 echo "To be processed: ${to_process_count}"
-
-
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \

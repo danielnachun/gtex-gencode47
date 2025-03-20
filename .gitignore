@@ -1,12 +1,10 @@
 # pixi environments
-pixi.lock
-.pixi
-.rattler
+scripts/processing/pixi.lock
+scripts/processing/.pixi/*
+scripts/processing/.rattler/*
 *.egg-info
+.pixi/*
 
-# pixi environments
-.pixi
-*.egg-info
 
 # data and output
 data/*
