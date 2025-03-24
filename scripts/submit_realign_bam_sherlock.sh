@@ -50,7 +50,7 @@ echo "To be processed: ${to_process_count}"
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
     --array "1-${to_process_count}%250" \
-    --time 15:00:00 \
+    --time 24:00:00 \
     --cpus-per-task 1 \
     --partition normal,owners \
     --mem 64G \

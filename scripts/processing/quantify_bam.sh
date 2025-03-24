@@ -71,12 +71,60 @@ done
 # activate the pixi enviroment
 #source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)
 
-# Try to activate pixi environment
-if ! eval "$(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)"; then
-    echo "Error: Failed to activate pixi environment"
-    echo "Please check environment setup and try again"
-    exit 1
-fi
+
+# Define variables
+max_attempts=5
+attempt=1
+wait_time=10  # seconds to wait between attempts
+
+# Function to attempt pixi environment activation
+activate_pixi_env() {
+    echo "Attempt $attempt of $max_attempts: Activating pixi environment..."
+    
+    # Capture the command output and error
+    pixi_output=$(pixi shell --environment quantifybam --manifest-path ${code_dir}/pixi.toml --print-path 2>&1)
+    if [ $? -ne 0 ]; then
+        echo "Failed to get pixi shell path:"
+        echo "$pixi_output"
+        return 1
+    fi
+    
+    # Try sourcing the environment
+    source_cmd="source \"$pixi_output\""
+    eval "$source_cmd" 2>/dev/null
+    
+    # Check if environment was properly activated
+    if command -v rnaseqc >/dev/null 2>&1; then
+        echo "Successfully activated pixi environment"
+        return 0
+    else
+        echo "Environment sourced, but required commands not available"
+        return 1
+    fi
+}
+
+# Main loop to try activation with retries
+while [ $attempt -le $max_attempts ]; do
+    if activate_pixi_env; then
+        # Success - break out of the loop
+        break
+    else
+        # Failed attempt
+        if [ $attempt -eq $max_attempts ]; then
+            echo "ERROR: Failed to activate pixi environment after $max_attempts attempts."
+            echo "Please check your pixi installation and environment configuration."
+            exit 1
+        fi
+        
+        # Increment attempt counter and wait before retry
+        echo "Retrying in $wait_time seconds..."
+        sleep $wait_time
+        attempt=$((attempt+1))
+    fi
+done
+
+echo "Pixi environment activated successfully after $attempt attempt(s)."
+echo "Continuing with the rest of the script..."
 
 
 

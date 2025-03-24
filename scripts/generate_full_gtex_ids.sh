@@ -2,7 +2,7 @@
 
 vcf_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs"
 bam_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/raw/GTEx_Analysis_2022-06-06_v10_RNAseq_BAM_files"
-output_file="//oak/stanford/groups/smontgom/dnachun/data/gtex/v10/all_tissue_analysis/data/matched_gtex_ids.txt"
+output_file="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues/matched_gtex_ids.txt"
 
 # clear output file
 > "$output_file"

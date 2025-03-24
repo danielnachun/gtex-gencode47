@@ -75,7 +75,7 @@ sbatch --output "${output_dir}/logs/%A_%a.log" \
     --mem 64G \
     --job-name participant_vcf \
     ${code_dir}/extract_participant_vcfs.sh \
-        --participant_id_list ${participant_id_list} \
+        --participant_id_list ${new_participant_list} \
         --full_vcf ${full_vcf} \
         --output_dir ${output_dir} \
         --code_dir ${code_dir}

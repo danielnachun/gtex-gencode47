@@ -1,66 +1,78 @@
 #!/bin/bash
+module load bedtools
 
 # Set bash options for verbose output and to fail immediately on errors or if variables are undefined.
 set -o xtrace -o nounset -o pipefail -o errexit
 
-INPUT_GTF="/home/klawren/oak/gtex/data/references/gencode.v47.annotation.gtf"
-OUTPUT_GTF="gencode.v47.background.gtf"
-CHROM_SIZES="/home/klawren/oak/gtex/data/references/GRCh38.chrsizes"
+# Input parameters
+INPUT_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v47.genes.gtf"
+CHROM_SIZES="/home/klawren/oak/gtex/data/realign_references/GRCh38.chrsizes"
+TMP_DIR="/home/klawren/oak/gtex/data/other_references/nongenic_null"
 
-# 1. Extract exons and genes, and sort them properly
-grep -w "exon" $INPUT_GTF | sort -k1,1V -k4,4n > exons.tmp.gtf
-grep -w "gene" $INPUT_GTF | sort -k1,1V -k4,4n > genes.tmp.gtf
+# pull out exons
+awk -v OFS='\t' '$3=="exon" {
+    # extract exon_id and gene_id
+    match($0, /exon_id "([^"]+)"/, eid)
+    match($0, /gene_id "([^"]+)"/, gid)
+    print $1, $4-1, $5, eid[1], gid[1]
+}' "${INPUT_GTF}" | \
+    bedtools sort -i - > "${TMP_DIR}/all_exons.bed"
 
-# 2. Create BED format for exons
-awk -v OFS="\t" '{print $1,$4-1,$5,$9,".",$7}' exons.tmp.gtf | sort -k1,1V -k2,2n > exons.tmp.bed
+# pull out genes 
+awk -v OFS='\t' '$3=="gene" {print $1, $4-1, $5}' "${INPUT_GTF}" | \
+    bedtools sort -i - | \
+    bedtools merge -i - > "${TMP_DIR}/merged_genes.bed"
 
-# 3. Create gene BED format
-awk -v OFS="\t" '{print $1,$4-1,$5,$9,".",$7}' genes.tmp.gtf | sort -k1,1V -k2,2n > genes.tmp.bed
+# create intronic regions (genes minus exons + 100)
+bedtools slop -i "${TMP_DIR}/all_exons.bed" -g "${CHROM_SIZES}" -b 100 > "${TMP_DIR}/exons_buffer.bed"
+bedtools subtract -a "${TMP_DIR}/merged_genes.bed" \
+    -b "${TMP_DIR}/exons_buffer.bed" > "${TMP_DIR}/intronic_regions.bed"
 
-# 4. Find intronic regions (regions within genes but not in exons)
-bedtools subtract -a genes.tmp.bed -b exons.tmp.bed | \
-  awk -v OFS="\t" '{
-    # Trim 100bp from both sides of intronic regions
-    start=$2+100;
-    end=$3-100;
-    if(end > start) print $1,start,end,$4,".",$6,"intronic"
-  }' | sort -k1,1V -k2,2n > intronic.tmp.bed
+# create intergenic regions (genome minus genes + 1000)
+bedtools slop -i "${TMP_DIR}/merged_genes.bed" -g "${CHROM_SIZES}" -b 100 > "${TMP_DIR}/genes_buffer.bed"
+awk -v OFS='\t' '{print $1, "0", $2}' "${CHROM_SIZES}" | \
+    bedtools subtract -a - -b "${TMP_DIR}/genes_buffer.bed" > "${TMP_DIR}/intergenic_regions.bed"
 
-# 5. Find intergenic regions using the provided chromosome sizes
-bedtools complement -i genes.tmp.bed -g $CHROM_SIZES | \
-  awk -v OFS="\t" '{
-    # Trim 1000bp from both sides of intergenic regions
-    start=$2+1000;
-    end=$3-1000;
-    if(end > start) print $1,start,end,"intergenic",".",".","intergenic"
-  }' | sort -k1,1V -k2,2n > intergenic.tmp.bed
+# combine intronic and intergenic regions
+cat "${TMP_DIR}/intergenic_regions.bed" "${TMP_DIR}/intronic_regions.bed" | \
+    bedtools sort -i - > "${TMP_DIR}/background_regions.bed"
 
-# 6. Combine intronic and intergenic regions
-cat intronic.tmp.bed intergenic.tmp.bed | sort -k1,1V -k2,2n > background_regions.tmp.bed
 
-# 7. Find nearest background region for each exon and calculate shift
-bedtools closest -a exons.tmp.bed -b background_regions.tmp.bed -D ref | \
-  awk -v OFS="\t" '{
-    shift=$8-$2;  # Calculate shift distance
-    type=$13;     # Get the type (intronic or intergenic)
-    print $1,$2+shift,$3+shift,$4,".",$6,type
-  }' > shifted_exons.tmp.bed
+# this works but is too slow, python implementiaion in notebooks/matched_nongenic_null.ipynb
+# # find the nearest region that can accomedate each exon 
+# > "${TMP_DIR}/nongenic_exon_matches.bed"
+# TOTAL_EXONS=$(wc -l < "${TMP_DIR}/all_exons.bed")
 
-# 8. Convert back to GTF format and add _background to IDs
-awk -v OFS="\t" '{
-    split($4,attrs,";");
-    new_attrs="";
-    for(i in attrs) {
-        if(attrs[i] ~ /gene_id|transcript_id/) {
-            gsub(/"[^"]*"/, "&_background", attrs[i]);
-        }
-        new_attrs = new_attrs attrs[i] ";";
-    }
-    source = ($7 == "intronic") ? "intronic_background" : "intergenic_background";
-    print $1,source,"exon",$2+1,$3,".",$6,".",new_attrs;
-}' shifted_exons.tmp.bed > $OUTPUT_GTF
+# find_nearest_non_genic_region() {
+#     local exon="$1"
+#     local exon_chr=$(echo "$exon" | cut -f1)
+#     local exon_start=$(echo "$exon" | cut -f2)
+#     local exon_end=$(echo "$exon" | cut -f3)
+#     local exon_id=$(echo "$exon" | cut -f4)
+#     local gene_id=$(echo "$exon" | cut -f5)
+#     local exon_length=$((exon_end - exon_start))
 
-# 9. Clean up temporary files
-rm *.tmp.*
+#     local nearest_region=$(awk -v chr="$exon_chr" -v start="$exon_start" -v exon_length="$exon_length" '
+#         $1 == chr && ($3 - $2) >= exon_length {
+#             distance = ($2 > start) ? $2 - start : start - $2
+#             if (min_distance == "" || distance < min_distance) {
+#                 min_distance = distance
+#                 nearest_region = $0
+#             }
+#         }
+#         END { print nearest_region }
+#     ' "${TMP_DIR}/background_regions.bed")
 
-echo "Created background GTF file: $OUTPUT_GTF"
+#     if [ -n "$nearest_region" ]; then
+#         local region_start=$(echo "$nearest_region" | cut -f2)
+#         local region_end=$((region_start + exon_length))
+#         echo -e "$exon_chr\t$region_start\t$region_end\t${exon_id}_null\t${gene_id}_null"
+#     fi
+# }
+
+# # Use pv to show progress while reading the input file
+# pv -l -s "$TOTAL_EXONS" "${TMP_DIR}/all_exons.bed" | while read -r exon; do
+#     find_nearest_non_genic_region "$exon" >> "${TMP_DIR}/nongenic_exon_matches.bed"
+# done
+
+
