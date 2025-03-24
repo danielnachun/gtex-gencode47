@@ -67,34 +67,27 @@ done
 # activate the pixi enviroment
 #source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
 
-
 # Define variables
 max_attempts=5
 attempt=1
-wait_time=10  # seconds to wait between attempts
+wait_time=30  # seconds to wait between attempts
 
 # Function to attempt pixi environment activation
 activate_pixi_env() {
     echo "Attempt $attempt of $max_attempts: Activating pixi environment..."
     
-    # Capture the command output and error
-    pixi_output=$(pixi shell --environment realignbam --manifest-path ${code_dir}/pixi.toml --print-path 2>&1)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get pixi shell path:"
-        echo "$pixi_output"
-        return 1
-    fi
-    
-    # Try sourcing the environment
-    source_cmd="source \"$pixi_output\""
-    eval "$source_cmd" 2>/dev/null
-    
-    # Check if environment was properly activated
-    if command -v samtools >/dev/null 2>&1; then
-        echo "Successfully activated pixi environment"
-        return 0
+    # Try to activate the environment using shell-hook
+    if eval "$(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)"; then
+        # Check if environment was properly activated
+        if command -v picard >/dev/null 2>&1; then
+            echo "Successfully activated pixi environment"
+            return 0
+        else
+            echo "Environment activated, but picard not available"
+            return 1
+        fi
     else
-        echo "Environment sourced, but required commands not available"
+        echo "Failed to activate pixi environment"
         return 1
     fi
 }
@@ -120,8 +113,6 @@ while [ $attempt -le $max_attempts ]; do
 done
 
 echo "Pixi environment activated successfully after $attempt attempt(s)."
-echo "Continuing with the rest of the script..."
-
 
 
 
