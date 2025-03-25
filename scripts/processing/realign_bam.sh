@@ -105,9 +105,13 @@ while [ $attempt -le $max_attempts ]; do
             exit 1
         fi
         
-        # Increment attempt counter and wait before retry
-        echo "Retrying in $wait_time seconds..."
-        sleep $wait_time
+        # Increment attempt counter and wait before retry (can't use sleep due to sherlock requirements)
+        echo "Waiting $wait_time seconds before retry..."
+        end_time=$(($(date +%s) + $wait_time))
+        while [ $(date +%s) -lt $end_time ]; do
+            # Perform trivial computation 
+            for i in {1..1000}; do echo $i > /dev/null; done
+        done
         attempt=$((attempt+1))
     fi
 done

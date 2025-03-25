@@ -162,27 +162,4 @@ bash ${code_dir}/run_rnaseq_qc.sh \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/rnaseq_qc
 
-# run coverage
-bash ${code_dir}/run_bam_to_coverage.sh \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --chr_sizes ${dir_prefix}/references/${chr_sizes} \
-    --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/output/coverage
-
-# run gatk
-bash ${code_dir}/run_gatk.sh \
-    --sample_id ${sample_id} \
-    --dir_prefix ${dir_prefix} \
-    --genome_fasta ${dir_prefix}/references/${reference_fasta} \
-    --vcf_dir ${vcf_dir} \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --output_dir ${dir_prefix}/output/gatk
-
-# run regtools
-bash ${code_dir}/run_regtools.sh \
-    --sample_id ${sample_id} \
-    --dir_prefix ${dir_prefix} \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --output_dir ${dir_prefix}/output/leafcutter
-
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
