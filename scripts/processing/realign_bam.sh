@@ -189,8 +189,6 @@ else
         --tmp_dir ${dir_prefix}/tmp/star
 fi
 
-
-
 # sync bams
 bash ${code_dir}/run_bam_sync.sh \
     --initial_bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
