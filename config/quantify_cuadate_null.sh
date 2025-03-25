@@ -7,6 +7,6 @@ chr_sizes=GRCh38.chrsizes
 genes_gtf=gencode.v47.matched_nongenic_null.gtf
 intervals_bed=gencode.v47.GRCh38.insert_size_intervals_geq1000bp.bed
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/caudate_analysis/null
+output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/caudate_nongenic_null
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 

@@ -162,4 +162,4 @@ bash ${code_dir}/run_rnaseq_qc.sh \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/rnaseq_qc
 
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+rsync -Prhltv ${dir_prefix}/output/rnaseq_qc ${output_dir}/rnaseq_qc

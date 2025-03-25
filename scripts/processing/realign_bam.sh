@@ -21,6 +21,17 @@ check_for_directory() {
     fi
 }
 
+# check for file, warn instead of exiting
+check_vcf_file() {
+    file_path="${1}"
+    file_desc="${2}"
+    if [[ ! -f ${file_path} ]]; then
+        echo "Warning: ${file_desc} file ${file_path} does not exist."
+        return 1
+    fi
+    return 0
+}
+
 options_array=(
     reference_dir
     vcf_dir
@@ -125,12 +136,6 @@ line_number=${SLURM_ARRAY_TASK_ID}
 bam_file="$(sed "${line_number}q; d" "${bam_list}")"
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
-vcf_file=${participant_id}.snps.vcf.gz
-vcf_index=${participant_id}.snps.vcf.gz.tbi
-
-# check for vcf file and vcf file index
-check_for_file "vcf_file" "${vcf_dir}/${vcf_file}"
-check_for_file "vcf_index" "${vcf_dir}/${vcf_index}"
 
 # check for bam file
 check_for_file "bam_file" "${bam_file}"
@@ -138,15 +143,11 @@ check_for_file "bam_file_index" "${bam_file}.bai"
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
-vcf_dir_tmp=${dir_prefix}/vcfs
-mkdir -p ${vcf_dir_tmp}
 mkdir -p ${dir_prefix}/raw
 mkdir -p ${dir_prefix}/tmp
 
 # copy references and data to temop direcotry in compute node
 rsync -PrhLtv ${reference_dir}/* ${dir_prefix}/references/
-rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
-rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 rsync -PrhLtv ${bam_file} ${dir_prefix}/raw
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/raw
 
@@ -156,14 +157,39 @@ bash ${code_dir}/run_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.A
     --reference_fasta ${dir_prefix}/references/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq
 
-# align with star
-bash ${code_dir}/run_fastq_to_star.sh \
-    --star_index ${dir_prefix}/references/${star_index} \
-    --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
-    --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
-    --sample_id ${sample_id} \
-    --vcf_file ${vcf_dir_tmp}/${vcf_file} \
-    --tmp_dir ${dir_prefix}/tmp/star
+# Check for VCF files and run star with WASP if the exist
+vcf_file=${participant_id}.snps.vcf.gz 
+vcf_index=${participant_id}.snps.vcf.gz.tbi
+vcf_path="${vcf_dir}/${vcf_file}"
+vcf_index_path="${vcf_dir}/${vcf_index}"
+
+if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
+    echo "VCF files found. Running STAR with WASP..."
+    vcf_dir_tmp=${dir_prefix}/vcfs
+    mkdir -p ${vcf_dir_tmp}
+    rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
+    rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
+
+    # align with star
+    bash ${code_dir}/run_fastq_to_star.sh \
+        --star_index ${dir_prefix}/references/${star_index} \
+        --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
+        --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
+        --sample_id ${sample_id} \
+        --vcf_file ${vcf_dir_tmp}/${vcf_file} \
+        --tmp_dir ${dir_prefix}/tmp/star
+else
+    echo "Warning: VCF files not found, running STAR without WASP..."
+    # align with star
+    bash ${code_dir}/run_fastq_to_star.sh \
+        --star_index ${dir_prefix}/references/${star_index} \
+        --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
+        --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
+        --sample_id ${sample_id} \
+        --tmp_dir ${dir_prefix}/tmp/star
+fi
+
+
 
 # sync bams
 bash ${code_dir}/run_bam_sync.sh \
