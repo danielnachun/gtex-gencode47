@@ -5,7 +5,8 @@ module load bedtools
 set -o xtrace -o nounset -o pipefail -o errexit
 
 # Input parameters
-INPUT_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v47.genes.gtf"
+GENE_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v47.genes.gtf"
+ALL_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v47.annotation.gtf"
 CHROM_SIZES="/home/klawren/oak/gtex/data/realign_references/GRCh38.chrsizes"
 TMP_DIR="/home/klawren/oak/gtex/data/other_references/nongenic_null"
 
@@ -15,11 +16,20 @@ awk -v OFS='\t' '$3=="exon" {
     match($0, /exon_id "([^"]+)"/, eid)
     match($0, /gene_id "([^"]+)"/, gid)
     print $1, $4-1, $5, eid[1], gid[1]
-}' "${INPUT_GTF}" | \
+}' "${ALL_GTF}" | \
     bedtools sort -i - > "${TMP_DIR}/all_exons.bed"
 
+# pull out exons
+awk -v OFS='\t' '$3=="exon" {
+    # extract exon_id and gene_id
+    match($0, /exon_id "([^"]+)"/, eid)
+    match($0, /gene_id "([^"]+)"/, gid)
+    print $1, $4-1, $5, eid[1], gid[1]
+}' "${GENE_GTF}" | \
+    bedtools sort -i - > "${TMP_DIR}/exons_to_match.bed"
+
 # pull out genes 
-awk -v OFS='\t' '$3=="gene" {print $1, $4-1, $5}' "${INPUT_GTF}" | \
+awk -v OFS='\t' '$3=="gene" {print $1, $4-1, $5}' "${ALL_GTF}" | \
     bedtools sort -i - | \
     bedtools merge -i - > "${TMP_DIR}/merged_genes.bed"
 

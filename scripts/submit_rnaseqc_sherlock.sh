@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_cuadate_null.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate_null.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -25,10 +25,10 @@ bam_list="$output_dir/realigned_bam_list"
 if [ "$regenerate_all" = true ]; then
     awk -v dir="$realign_bam_dir" '{print dir "/" $0 ".Aligned.sortedByCoord.out.patched.v11md.bam"}' "$gtex_ids" > "$bam_list"
 else
-    # only add a gtex id if the genome bam does not already exist
+    # only add a gtex id if the null rnaseqc doesn't exist
     > "$bam_list"  
     while read -r gtex_id; do
-        bam_file="${output_dir}/leafcutter/${gtex_id}.regtools_junc.txt.gz"
+        bam_file="${output_dir}/rnaseq_qc/${gtex_id}.gene_tpm.gct.gz"
         if [ ! -f "$bam_file" ]; then
             echo "$realign_bam_dir/$gtex_id.Aligned.sortedByCoord.out.patched.v11md.bam" >> "$bam_list"
         fi

@@ -181,7 +181,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
 else
     echo "Warning: VCF files not found, running STAR without WASP..."
     # align with star
-    bash ${code_dir}/run_fastq_to_star.sh \
+    bash ${code_dir}/run_fastq_to_star_no_vcf.sh \
         --star_index ${dir_prefix}/references/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
