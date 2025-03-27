@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_caudate.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -45,12 +45,15 @@ echo "Original sample count: ${original_count}"
 echo "Already completed: ${completed_count}"
 echo "To be processed: ${to_process_count}"
 
-
+# sherlock only lets up to 1k jobs at a time
+if [ "$to_process_count" -gt 2000 ]; then
+  to_process_count=1000
+fi
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
     --array "1-${to_process_count}%250" \
-    --time 24:00:00 \
+    --time 20:00:00 \
     --cpus-per-task 1 \
     --partition normal,owners \
     --mem 64G \

@@ -163,4 +163,4 @@ bash ${code_dir}/run_rnaseq_qc.sh \
     --output_dir ${dir_prefix}/output/rnaseq_qc
 
 mkdir -p ${output_dir}/rnaseq_qc/
-rsync -Prhltv ${dir_prefix}/output/rnaseq_qc/* ${output_dir}/rnaseq_qc/*
+rsync -Prhltv ${dir_prefix}/output/rnaseq_qc/* ${output_dir}/rnaseq_qc/
