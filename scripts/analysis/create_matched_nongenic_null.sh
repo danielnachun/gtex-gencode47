@@ -5,10 +5,10 @@ module load bedtools
 set -o xtrace -o nounset -o pipefail -o errexit
 
 # Input parameters
-GENE_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v47.genes.gtf"
-ALL_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v47.annotation.gtf"
+GENE_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v39.genes.gtf"
+ALL_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v39.annotation.gtf"
 CHROM_SIZES="/home/klawren/oak/gtex/data/realign_references/GRCh38.chrsizes"
-TMP_DIR="/home/klawren/oak/gtex/data/other_references/nongenic_null_with_introns"
+TMP_DIR="/home/klawren/oak/gtex/data/other_references/nongenic_null_v10"
 
 # pull out exons
 awk -v OFS='\t' '$3=="exon" {

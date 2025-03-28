@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate_null_v11_intergenic.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate_null_v10_intergenic.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -53,7 +53,6 @@ sbatch --output "${output_dir}/logs/%A_%a.log" \
     --job-name quantiy_bam \
     ${code_dir}/quantify_rnaseqc.sh \
         --reference_dir ${reference_dir} \
-        --vcf_dir ${vcf_dir} \
         --output_dir ${output_dir} \
         --code_dir ${code_dir} \
         --reference_fasta ${reference_fasta} \

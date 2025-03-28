@@ -24,7 +24,6 @@ check_for_directory() {
 
 options_array=(
     reference_dir
-    vcf_dir
     output_dir
     code_dir
     bam_list
@@ -44,8 +43,6 @@ while true; do
     case "${1}" in
         --reference_dir )
             reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --vcf_dir )
-            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --code_dir )
@@ -128,12 +125,6 @@ bam_file="$(sed "${line_number}q; d" "${bam_list}")"
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
-vcf_file=${participant_id}.snps.vcf.gz
-vcf_index=${participant_id}.snps.vcf.gz.tbi
-
-# check for vcf file and vcf file index
-check_for_file "vcf_file" "${vcf_dir}/${vcf_file}"
-check_for_file "vcf_index" "${vcf_dir}/${vcf_index}"
 
 # check for bam file
 check_for_file "bam_file" "${bam_file}"
@@ -141,15 +132,11 @@ check_for_file "bam_file_index" "${bam_file}.bai"
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
-vcf_dir_tmp=${dir_prefix}/vcfs
-mkdir -p ${vcf_dir_tmp}
 mkdir -p ${dir_prefix}/output/genome_bam
 mkdir -p ${dir_prefix}/tmp
 
 # copy references and data to temop direcotry in compute node
 rsync -PrhLtv ${reference_dir}/* ${dir_prefix}/references/
-rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
-rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 rsync -PrhLtv ${bam_file} ${dir_prefix}/output/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/output/genome_bam
 
