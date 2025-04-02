@@ -8,4 +8,4 @@ genes_gtf=gencode.v47.matched_nongenic_null_introns.gtf
 intervals_bed=gencode.v47.GRCh38.insert_size_intervals_geq1000bp.bed
 output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/caudate_nongenic_null/v11_introns
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
-
+bam_file_end=Aligned.sortedByCoord.out.patched.v11md.bam

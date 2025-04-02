@@ -212,3 +212,8 @@ bash ${code_dir}/run_rsem.sh \
 
 
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
+# delete the corresponding bam in the extra bam folder
+extra_bam_dir="/home/klawren/oak/gtex/data/raw/GTEx_Analysis_2022-06-06_v10_RNAseq_BAM_files"
+extra_bam_file="${extra_bam_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam"
+rm extra_bam_file

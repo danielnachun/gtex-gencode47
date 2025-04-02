@@ -31,6 +31,7 @@ options_array=(
     chr_sizes
     genes_gtf
     intervals_bed
+    bam_file_end
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -57,6 +58,8 @@ while true; do
             genes_gtf="${2}"; shift 2 ;;
         --intervals_bed )
             intervals_bed="${2}"; shift 2 ;;
+        --bam_file_end )
+            bam_file_end="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -122,7 +125,7 @@ echo "Pixi environment activated successfully after $attempt attempt(s)."
 # map job id to line number and then to sample id
 line_number=${SLURM_ARRAY_TASK_ID}
 bam_file="$(sed "${line_number}q; d" "${bam_list}")"
-sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
+sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
 
@@ -142,7 +145,7 @@ rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/output/genome_bam
 
 # run rnaseq qc
 bash ${code_dir}/run_rnaseq_qc.sh \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.${bam_file_end} \
     --genes_gtf ${dir_prefix}/references/${genes_gtf} \
     --genome_fasta ${dir_prefix}/references/${reference_fasta} \
     --intervals_bed ${dir_prefix}/references/${intervals_bed} \

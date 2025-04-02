@@ -23,14 +23,14 @@ bam_list="$output_dir/realigned_bam_list"
 
 
 if [ "$regenerate_all" = true ]; then
-    awk -v dir="$realign_bam_dir" '{print dir "/" $0 ".Aligned.sortedByCoord.out.patched.v11md.bam"}' "$gtex_ids" > "$bam_list"
+awk -v dir="$realign_bam_dir" -v fileEnd="$bam_file_end" '{print dir "/" $0 file_end}' "$gtex_ids" > "$bam_list"
 else
     # only add a gtex id if the null rnaseqc doesn't exist
     > "$bam_list"  
     while read -r gtex_id; do
         bam_file="${output_dir}/rnaseq_qc/${gtex_id}.gene_tpm.gct.gz"
         if [ ! -f "$bam_file" ]; then
-            echo "$realign_bam_dir/$gtex_id.Aligned.sortedByCoord.out.patched.v11md.bam" >> "$bam_list"
+            echo "$realign_bam_dir/$gtex_id.$bam_file_end" >> "$bam_list"
         fi
     done < "$gtex_ids"
 fi
@@ -59,4 +59,5 @@ sbatch --output "${output_dir}/logs/%A_%a.log" \
         --bam_list=${bam_list} \
         --genes_gtf ${genes_gtf} \
         --chr_sizes ${chr_sizes} \
-        --intervals_bed ${intervals_bed}
+        --intervals_bed ${intervals_bed} \
+        --bam_file_end ${bam_file_end}
