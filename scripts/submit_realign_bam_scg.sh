@@ -43,7 +43,6 @@ echo "Original sample count: ${original_count}"
 echo "Already completed: ${completed_count}"
 echo "To be processed: ${to_process_count}"
 
-
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
     --array "1-${to_process_count}" \
