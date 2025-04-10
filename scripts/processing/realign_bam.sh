@@ -217,5 +217,5 @@ rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 extra_bam_dir="/home/klawren/oak/gtex/data/raw/bam_copy"
 extra_bam_file="${extra_bam_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam"
 extra_bam_index="${extra_bam_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam.bai"
-rm -f ${extra_bam_file}
-rm -f ${$extra_bam_index}
+rm -f "${extra_bam_file}"
+rm -f "${extra_bam_index}"
