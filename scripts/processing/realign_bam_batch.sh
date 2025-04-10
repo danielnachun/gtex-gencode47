@@ -69,7 +69,7 @@ done
 for i in {0..9}; do
     line_number=$((SLURM_ARRAY_TASK_ID + i + 1))
     bam_file="$(sed "${line_number}q; d" "${bam_list}")"
-    srun -n 1 ${code_dir}/realign_bam_batch.sh \
+    srun -n 1 ${code_dir}/realign_bam.sh \
         --reference_dir ${reference_dir} \
         --vcf_dir ${vcf_dir} \
         --output_dir ${output_dir} \

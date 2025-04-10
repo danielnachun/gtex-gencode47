@@ -55,6 +55,7 @@ sbatch --output "${output_dir}/logs/%A_%a.log" \
     --array "0-${to_process_count}:10" \
     --time 24:00:00 \
     -n 10 \
+    -N 10 \
     --partition normal,owners \
     --mem-per-cpu 64G \
     --job-name realign_bam_batch \
