@@ -47,18 +47,18 @@ echo "To be processed: ${to_process_count}"
 
 # sherlock only lets up to 1k?ish jobs at a time
 if [ "$to_process_count" -gt 2000 ]; then
-  to_process_count=1000
+  to_process_count=999
 fi
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
-    --array "1-${to_process_count}%250" \
+    --array "0-${to_process_count}:10" \
     --time 24:00:00 \
-    --cpus-per-task 1 \
+    -n 10 \
     --partition normal,owners \
-    --mem 64G \
-    --job-name realign_bam \
-    ${code_dir}/realign_bam.sh \
+    --mem-per-cpu 64G \
+    --job-name realign_bam_batch \
+    ${code_dir}/realign_bam_batch.sh \
         --reference_dir ${reference_dir} \
         --vcf_dir ${vcf_dir} \
         --output_dir ${output_dir} \

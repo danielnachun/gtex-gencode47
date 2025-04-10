@@ -37,7 +37,7 @@ options_array=(
     vcf_dir
     output_dir
     code_dir
-    bam_list
+    bam_file
     reference_fasta
     rsem_ref_dir
     star_index
@@ -59,8 +59,8 @@ while true; do
             output_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --bam_list )
-            bam_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --bam_file )
+            bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
         --rsem_ref_dir )
@@ -129,17 +129,9 @@ done
 
 echo "Pixi environment activated successfully after $attempt attempt(s)."
 
-
-
-# map job id to line number and then to sample id
-line_number=${SLURM_ARRAY_TASK_ID}
-bam_file="$(sed "${line_number}q; d" "${bam_list}")"
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
-# check for bam file
-check_for_file "bam_file" "${bam_file}"
-check_for_file "bam_file_index" "${bam_file}.bai"
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
@@ -212,6 +204,7 @@ bash ${code_dir}/run_rsem.sh \
 
 
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
 
 # delete the corresponding bam in the extra bam folder
 extra_bam_dir="/home/klawren/oak/gtex/data/raw/bam_copy"
