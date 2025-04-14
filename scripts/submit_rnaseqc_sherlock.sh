@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate_null_v10_intergenic.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate_v10.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
