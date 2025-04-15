@@ -12,99 +12,68 @@ else
 fi
 
 
-# if true do all in gtex_ids
-# if false, do all in gtex ids that do not already have a genome_bam in the output folder
-regenerate_all=false
-
-# make a bam list
 mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
 
-
-bam_list="$output_dir/bam_list"
-> "$bam_list" # clear the file
-
-if [ "$regenerate_all" = true ]; then
-    # all gtex ids have a corresponding bam
-    awk -v dir="$bam_dir" '{print dir "/" $0 ".Aligned.sortedByCoord.out.patched.md.bam"}' "$gtex_ids" > "$bam_list"
-else
-    # only add a gtex id if the genome bam does not already exist
-    > "$bam_list"  
-    while read -r gtex_id; do
-        bam_file="${output_dir}/genome_bam/${gtex_id}.Aligned.sortedByCoord.out.patched.v11md.bam"
-        if [ ! -f "$bam_file" ]; then
-            echo "$bam_dir/$gtex_id.Aligned.sortedByCoord.out.patched.md.bam" >> "$bam_list"
-        fi
-    done < "$gtex_ids"
-fi
-
-
-original_count=$(wc -l < "${gtex_ids}")
-to_process_count=$(wc -l < "${bam_list}")
-completed_count=$((original_count - to_process_count))
+# get all the v10 bam paths
+full_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.md.bam$')
+original_count=$(echo "$full_bam_list" | wc -l)
 echo "Original sample count: ${original_count}"
-echo "Already completed: ${completed_count}"
+
+# if true do all in gtex_ids
+# if false, do all in gtex ids that do not already have a genome_bam in the output folder
+regenerate_all=${regenerate_all:-false}
+if [ "${regenerate_all}" = true ]; then
+    # run all the bams in the input folder
+    bams_to_realign="${full_bam_list}"
+else
+    # only realign a bam if the v11 genome bam does not already exist
+    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/") <(sed 's|\.md\.bam$|.v11md.bam|' <<< "$full_bam_list"))
+fi
+bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
+
+to_process_count=$(echo "$bams_to_realign" | wc -l)
 echo "To be processed: ${to_process_count}"
+completed_count=$((original_count - to_process_count))
+echo "Already completed: ${completed_count}"
 
-# # sherlock only lets up to 1k?ish jobs at a time
-# if [ "$to_process_count" -gt 1000 ]; then
-#   to_process_count=1000
-# fi
+echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 
+# create a folder with a file per step, with one bam path per line in the file
+bam_list_folder="$output_dir/bam_file_lists"
+rm -rf "${bam_list_folder}"
+mkdir -p "${bam_list_folder}"
+split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
 
-step=10
-max_array_size=1000 
+# create a file with one folder path per line
+bam_list_paths="${output_dir}/bam_list_paths.txt"
+rm -rf "${bam_list_paths}"
+printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
+num_batches=$(wc -l < "${bam_list_paths}")
+echo "Batches created: ${num_batches}"
 
-# sequential submission of 1k batches
+# Check if num_batches is greater than max_array_size
+if [ "${num_batches}" -gt "${max_array_size}" ]; then
+    num_batches="${max_array_size}" 
+fi
+echo "Batches running: ${num_batches}"
 
-previous_jobid=""
-for batch_start in $(seq 0 $((max_array_size * step)) $to_process_count); do
-    batch_end=$((batch_start + (max_array_size - 1) * step))
-    if [ "$batch_end" -gt "$to_process_count" ]; then
-        batch_end=$to_process_count
-    fi
-
-    if [ -z "$previous_jobid" ]; then
-        # First batch, no dependency
-        jobid=$(sbatch --parsable --output="${output_dir}/logs/%A_%a.log" \
+sbatch --output="${output_dir}/logs/%A_%a.log" \
             --error="${output_dir}/logs/%A_%a.log" \
-            --array="${batch_start}-${batch_end}:${step}%250" \
+            --array="1-${num_batches}%250" \
             --time=24:00:00 \
-            --ntasks-per-node=1 \
-            --nodes=10 \
+            --cpus-per-task="${step_size}" \
             --partition=normal,owners \
-            --mem=100G \
+            --mem=256G \
+            --tmp=60G \
             --job-name=realign_bam_batch \
             ${code_dir}/realign_bam_batch.sh \
                 --reference_dir ${reference_dir} \
                 --vcf_dir ${vcf_dir} \
                 --output_dir ${output_dir} \
                 --code_dir ${code_dir} \
-                --bam_list ${bam_list} \
+                --bam_list_paths ${bam_list_paths} \
                 --reference_fasta ${reference_fasta} \
                 --rsem_ref_dir ${rsem_ref_dir} \
-                --star_index ${star_index})
-    else
-        # Subsequent batches submit only after first batch is done
-        jobid=$(sbatch --parsable --dependency=afterany:${previous_jobid} \
-            --output="${output_dir}/logs/%A_%a.log" \
-            --error="${output_dir}/logs/%A_%a.log" \
-            --array="${batch_start}-${batch_end}:${step}%250" \
-            --time=24:00:00 \
-            --ntasks-per-node=1 \
-            --nodes=10 \
-            --partition=normal,owners \
-            --mem=100G \
-            --job-name=realign_bam_batch \
-            ${code_dir}/realign_bam_batch.sh \
-                --reference_dir ${reference_dir} \
-                --vcf_dir ${vcf_dir} \
-                --output_dir ${output_dir} \
-                --code_dir ${code_dir} \
-                --bam_list ${bam_list} \
-                --reference_fasta ${reference_fasta} \
-                --rsem_ref_dir ${rsem_ref_dir} \
-                --star_index ${star_index})
-    fi
-    previous_jobid=$jobid
-done
+                --star_index ${star_index} \
+                --step_size ${step_size}

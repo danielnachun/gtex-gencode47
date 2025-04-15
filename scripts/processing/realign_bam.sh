@@ -33,7 +33,7 @@ check_vcf_file() {
 }
 
 options_array=(
-    reference_dir
+    local_reference_dir
     vcf_dir
     output_dir
     code_dir
@@ -51,8 +51,8 @@ eval set -- "${arguments}"
 
 while true; do
     case "${1}" in
-        --reference_dir )
-            reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --local_reference_dir )
+            local_reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --vcf_dir )
             vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --output_dir )
@@ -138,15 +138,14 @@ dir_prefix=${TMPDIR}/${sample_id}
 mkdir -p ${dir_prefix}/raw
 mkdir -p ${dir_prefix}/tmp
 
-# copy references and data to temop direcotry in compute node
-rsync -PrhLtv ${reference_dir}/* ${dir_prefix}/references/
+# copy data to temp direcotry in compute node
 rsync -PrhLtv ${bam_file} ${dir_prefix}/raw
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/raw
 
 # process bams to fastqs
 bash ${code_dir}/run_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
     --sample_id ${sample_id} \
-    --reference_fasta ${dir_prefix}/references/${reference_fasta} \
+    --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq
 
 # Check for VCF files and run star with WASP if the exist
@@ -164,7 +163,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
 
     # align with star
     bash ${code_dir}/run_fastq_to_star.sh \
-        --star_index ${dir_prefix}/references/${star_index} \
+        --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
         --sample_id ${sample_id} \
@@ -174,7 +173,7 @@ else
     echo "Warning: VCF files not found, running STAR without WASP..."
     # align with star
     bash ${code_dir}/run_fastq_to_star_no_vcf.sh \
-        --star_index ${dir_prefix}/references/${star_index} \
+        --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
         --sample_id ${sample_id} \
@@ -197,7 +196,7 @@ bash ${code_dir}/run_mark_duplicates.sh \
 
 # run rsem, save isoform quantification
 bash ${code_dir}/run_rsem.sh \
-    --rsem_ref_dir ${dir_prefix}/references/${rsem_ref_dir} \
+    --rsem_ref_dir ${local_reference_dir}/${rsem_ref_dir} \
     --transcriptome_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.toTranscriptome.out.bam \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/rsem

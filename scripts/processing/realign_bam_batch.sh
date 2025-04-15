@@ -26,10 +26,11 @@ options_array=(
     vcf_dir
     output_dir
     code_dir
-    bam_list
+    bam_list_paths
     reference_fasta
     rsem_ref_dir
     star_index
+    step_size
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -48,14 +49,16 @@ while true; do
             output_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --bam_list )
-            bam_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --bam_list_paths )
+            bam_list_paths="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
         --rsem_ref_dir )
             rsem_ref_dir="${2}"; shift 2 ;;
         --star_index )
             star_index="${2}"; shift 2 ;;
+        --step_size )
+            step_size="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -65,19 +68,24 @@ while true; do
 done
 
 
+# get the paths to the bam files for this batch
+line_number="${SLURM_ARRAY_TASK_ID}"
+bam_list="$(sed "${line_number}q; d" "${bam_list_paths}")"
 
-for i in {0..9}; do
-    line_number=$((SLURM_ARRAY_TASK_ID + i + 1))
-    bam_file="$(sed "${line_number}q; d" "${bam_list}")"
-    srun -n 1 ${code_dir}/realign_bam.sh \
-        --reference_dir ${reference_dir} \
-        --vcf_dir ${vcf_dir} \
-        --output_dir ${output_dir} \
-        --code_dir ${code_dir} \
-        --bam_file ${bam_file} \
-        --reference_fasta ${reference_fasta} \
-        --rsem_ref_dir ${rsem_ref_dir} \
-        --star_index ${star_index} & 
-done
+# copy over the references to this node
+# folder specific to this batch
+reference_dir_prefix="${TMPDIR}/references_${line_number}"
+mkdir -p "${reference_dir_prefix}"
+rsync -PrhLtv "${reference_dir}"/* "${reference_dir_prefix}/"
 
-wait
+# run the batch
+cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup \
+        "${code_dir}/realign_bam.sh" \
+        --local_reference_dir "${reference_dir_prefix}/" \
+        --vcf_dir "${vcf_dir}" \
+        --output_dir "${output_dir}" \
+        --code_dir "${code_dir}" \
+        --bam_file {} \
+        --reference_fasta "${reference_fasta}" \
+        --rsem_ref_dir "${rsem_ref_dir}" \
+        --star_index "${star_index} "
