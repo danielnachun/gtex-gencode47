@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues_copied_only.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -65,7 +65,7 @@ sbatch --output="${output_dir}/logs/%A_%a.log" \
             --cpus-per-task="${step_size}" \
             --partition=normal,owners \
             --mem=256G \
-            --tmp=60G \
+            --tmp=250G \
             --job-name=realign_bam_batch \
             ${code_dir}/realign_bam_batch.sh \
                 --reference_dir ${reference_dir} \

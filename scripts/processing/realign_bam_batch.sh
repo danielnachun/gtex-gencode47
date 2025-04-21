@@ -89,3 +89,5 @@ cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup \
         --reference_fasta "${reference_fasta}" \
         --rsem_ref_dir "${rsem_ref_dir}" \
         --star_index "${star_index} "
+
+echo "Batch finished"

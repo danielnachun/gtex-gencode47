@@ -201,13 +201,17 @@ bash ${code_dir}/run_rsem.sh \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/rsem
 
-
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
-
-
 # delete the corresponding bam in the extra bam folder
-extra_bam_dir="/home/klawren/oak/gtex/data/raw/bam_copy"
+echo "Making space for the new file"
+
+extra_bam_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/raw/bam_copy"
 extra_bam_file="${extra_bam_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam"
 extra_bam_index="${extra_bam_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam.bai"
 rm -f "${extra_bam_file}"
 rm -f "${extra_bam_index}"
+
+echo "Copying out results"
+rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
+echo "Done"
+
