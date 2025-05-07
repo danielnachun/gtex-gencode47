@@ -65,7 +65,7 @@ sbatch --output="${output_dir}/logs/%A_%a.log" \
             --cpus-per-task="${step_size}" \
             --partition=normal,owners \
             --mem=128G \
-            --tmp=125G \
+            --tmp=200G \
             --job-name=realign_bam_batch \
             ${code_dir}/realign_bam_batch.sh \
                 --reference_dir ${reference_dir} \
