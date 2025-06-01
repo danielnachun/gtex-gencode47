@@ -8,4 +8,6 @@ intervals_bed=gencode.v47.GRCh38.insert_size_intervals_geq1000bp.bed
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues/
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
-
+regenerate_all=false
+step_size=16
+max_array_size=1000

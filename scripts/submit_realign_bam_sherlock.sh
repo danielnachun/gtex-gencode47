@@ -68,21 +68,21 @@ fi
 echo "Batches running: ${num_batches}"
 
 sbatch --output="${output_dir}/logs/%A_%a.log" \
-            --error="${output_dir}/logs/%A_%a.log" \
-            --array="1-${num_batches}%250" \
-            --time=48:00:00 \
-            --cpus-per-task="${step_size}" \
-            --partition=normal,owners \
-            --mem=128G \
-            --tmp=200G \
-            --job-name=realign_bam_batch \
-            ${code_dir}/realign_bam_batch.sh \
-                --reference_dir ${reference_dir} \
-                --vcf_dir ${vcf_dir} \
-                --output_dir ${output_dir} \
-                --code_dir ${code_dir} \
-                --bam_list_paths ${bam_list_paths} \
-                --reference_fasta ${reference_fasta} \
-                --rsem_ref_dir ${rsem_ref_dir} \
-                --star_index ${star_index} \
-                --step_size ${step_size}
+        --error="${output_dir}/logs/%A_%a.log" \
+        --array="1-${num_batches}%250" \
+        --time=48:00:00 \
+        --cpus-per-task="${step_size}" \
+        --partition=normal,owners \
+        --mem=128G \
+        --tmp=200G \
+        --job-name=realign_bam_batch \
+        ${code_dir}/realign_bam_batch.sh \
+            --reference_dir ${reference_dir} \
+            --vcf_dir ${vcf_dir} \
+            --output_dir ${output_dir} \
+            --code_dir ${code_dir} \
+            --bam_list_paths ${bam_list_paths} \
+            --reference_fasta ${reference_fasta} \
+            --rsem_ref_dir ${rsem_ref_dir} \
+            --star_index ${star_index} \
+            --step_size ${step_size}

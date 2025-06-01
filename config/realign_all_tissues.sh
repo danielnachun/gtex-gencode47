@@ -1,4 +1,3 @@
-# sample args
 bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/raw/GTEx_Analysis_2022-06-06_v10_RNAseq_BAM_files
 gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/other_references/all_tissues/non_caudate_samples.txt
 reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/realign_references
