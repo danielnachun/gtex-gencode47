@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_test_bams.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -15,8 +15,10 @@ fi
 mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
 
-# get all the v10 bam paths
-full_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.md.bam$')
+# get all the v10 bam paths from bam dir
+bam_dir_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.md.bam$')
+# filter to only those in gtex_ids
+full_bam_list=$(grep -F -f "$gtex_ids" <<< "$bam_dir_bam_list")
 original_count=$(echo "$full_bam_list" | wc -l)
 echo "Original sample count: ${original_count}"
 
@@ -28,15 +30,22 @@ if [ "${regenerate_all}" = true ]; then
     bams_to_realign="${full_bam_list}"
 else
     # only realign a bam if the v11 genome bam does not already exist
-    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/") <(sed 's|\.md\.bam$|.v11md.bam|' <<< "$full_bam_list"))
+    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 fi
-bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 
-to_process_count=$(echo "$bams_to_realign" | wc -l)
-echo "To be processed: ${to_process_count}"
+# Check if bams_to_realign is empty
+if [ -z "$bams_to_realign" ]; then
+    echo "To be processed: 0"
+    echo "All bams realigned"
+    exit 0  # Exit the script with a success status
+else
+    # If not empty, count the number of lines (bams to realign)
+    to_process_count=$(echo "$bams_to_realign" | wc -l)
+    echo "To be processed: $to_process_count"
+fi
+
 completed_count=$((original_count - to_process_count))
 echo "Already completed: ${completed_count}"
-
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 
 # create a folder with a file per step, with one bam path per line in the file
