@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_caudate.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_all_tissues.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -18,7 +18,7 @@ regenerate_all=false
 # make a bam list
 mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
-bam_list="$output_dir/realigned_bam_list"
+bam_list="$output_dir/quantify_sherlock_bam_list"
 > "$bam_list" # clear the file
 
 

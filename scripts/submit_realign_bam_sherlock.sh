@@ -40,13 +40,13 @@ echo "Already completed: ${completed_count}"
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 
 # create a folder with a file per step, with one bam path per line in the file
-bam_list_folder="$output_dir/bam_file_lists"
+bam_list_folder="$output_dir/realign_sherlock_bam_file_lists"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
 split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
-bam_list_paths="${output_dir}/bam_list_paths.txt"
+bam_list_paths="${output_dir}/realign_sherlock_bam_list_paths.txt"
 rm -rf "${bam_list_paths}"
 printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
 num_batches=$(wc -l < "${bam_list_paths}")
@@ -61,7 +61,7 @@ echo "Batches running: ${num_batches}"
 sbatch --output="${output_dir}/logs/%A_%a.log" \
             --error="${output_dir}/logs/%A_%a.log" \
             --array="1-${num_batches}%250" \
-            --time=24:00:00 \
+            --time=48:00:00 \
             --cpus-per-task="${step_size}" \
             --partition=normal,owners \
             --mem=128G \
