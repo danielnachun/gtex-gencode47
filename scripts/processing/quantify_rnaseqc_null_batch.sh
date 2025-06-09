@@ -23,7 +23,6 @@ check_for_directory() {
 
 options_array=(
     reference_dir
-    vcf_dir
     output_dir
     code_dir
     bam_list_paths
@@ -32,6 +31,7 @@ options_array=(
     genes_gtf
     intervals_bed
     step_size
+    bam_file_end
 )
 
 
@@ -45,8 +45,6 @@ while true; do
     case "${1}" in
         --reference_dir )
             reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --vcf_dir )
-            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --code_dir )
@@ -63,6 +61,8 @@ while true; do
             intervals_bed="${2}"; shift 2 ;;
         --step_size )
             step_size="${2}"; shift 2 ;;
+        --bam_file_end )
+            bam_file_end="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -87,15 +87,15 @@ echo "Requested CPUs: ${SLURM_CPUS_PER_TASK}"
 
 # run the batch
 cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup \
-        "${code_dir}/quantify_bam.sh" \
+        "${code_dir}/quantify_rnaseqc.sh" \
         --local_reference_dir "${reference_dir_prefix}/" \
-        --vcf_dir "${vcf_dir}" \
         --output_dir "${output_dir}" \
         --code_dir "${code_dir}" \
         --bam_file {} \
         --reference_fasta "${reference_fasta}" \
         --chr_sizes "${chr_sizes}" \
         --genes_gtf "${genes_gtf}" \
-        --intervals_bed "${intervals_bed} "
+        --intervals_bed "${intervals_bed}" \
+        --bam_file_end "${bam_file_end}"
 
 echo "Batch finished"

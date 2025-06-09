@@ -52,7 +52,7 @@ echo "BAMs running: ${to_process_count}"
 sbatch --output "${output_dir}/logs/%A_%a.log" \
     --error "${output_dir}/logs/%A_%a.log" \
     --array="1-${to_process_count}%250" \
-    --time 100:00:00 \
+    --time 200:00:00 \
     --account smontgom \
     --partition batch \
     --cpus-per-task 1 \

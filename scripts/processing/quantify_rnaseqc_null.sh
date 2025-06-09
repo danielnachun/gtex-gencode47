@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# useful for running though the null
+
 # Set bash options for verbose output and to fail immediately on errors or if variables are undefined.
 set -o xtrace -o nounset -o pipefail -o errexit
 
@@ -23,10 +25,10 @@ check_for_directory() {
 }
 
 options_array=(
-    reference_dir
+    local_reference_dir
     output_dir
     code_dir
-    bam_list
+    bam_file
     reference_fasta
     chr_sizes
     genes_gtf
@@ -42,14 +44,14 @@ eval set -- "${arguments}"
 
 while true; do
     case "${1}" in
-        --reference_dir )
-            reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --local_reference_dir )
+            local_reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --bam_list )
-            bam_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --bam_file )
+            bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
         --chr_sizes )
@@ -121,34 +123,26 @@ done
 
 echo "Pixi environment activated successfully after $attempt attempt(s)."
 
-
-# map job id to line number and then to sample id
-line_number=${SLURM_ARRAY_TASK_ID}
-bam_file="$(sed "${line_number}q; d" "${bam_list}")"
+# get sample id from file name
 sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
-
-# check for bam file
-check_for_file "bam_file" "${bam_file}"
-check_for_file "bam_file_index" "${bam_file}.bai"
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
 mkdir -p ${dir_prefix}/output/genome_bam
 mkdir -p ${dir_prefix}/tmp
 
-# copy references and data to temop direcotry in compute node
-rsync -PrhLtv ${reference_dir}/* ${dir_prefix}/references/
+# copy data to temp direcotry in compute node
 rsync -PrhLtv ${bam_file} ${dir_prefix}/output/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/output/genome_bam
 
 # run rnaseq qc
 bash ${code_dir}/run_rnaseq_qc.sh \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.${bam_file_end} \
-    --genes_gtf ${dir_prefix}/references/${genes_gtf} \
-    --genome_fasta ${dir_prefix}/references/${reference_fasta} \
-    --intervals_bed ${dir_prefix}/references/${intervals_bed} \
+    --genes_gtf ${local_reference_dir}/${genes_gtf} \
+    --genome_fasta ${local_reference_dir}/${reference_fasta} \
+    --intervals_bed ${local_reference_dir}/${intervals_bed} \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/rnaseq_qc
 
