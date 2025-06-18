@@ -87,7 +87,7 @@ echo "Requested CPUs: ${SLURM_CPUS_PER_TASK}"
 
 # run the batch
 cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup \
-        "${code_dir}/quantify_rnaseqc.sh" \
+        "${code_dir}/quantify_rnaseqc_null.sh" \
         --local_reference_dir "${reference_dir_prefix}/" \
         --output_dir "${output_dir}" \
         --code_dir "${code_dir}" \

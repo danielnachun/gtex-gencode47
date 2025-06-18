@@ -27,10 +27,9 @@ if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
     bams_to_realign="${full_bam_list}"
 else
-    # only realign a bam if the v11 genome bam does not already exist
-    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/") <(sed 's|\.md\.bam$|.v11md.bam|' <<< "$full_bam_list"))
+    # only realign a bam if the v11 genome bam does not already exist, check for index to make sure bam is complete
+    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam.bai$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 fi
-bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 
 to_process_count=$(echo "$bams_to_realign" | wc -l)
 echo "To be processed: ${to_process_count}"
