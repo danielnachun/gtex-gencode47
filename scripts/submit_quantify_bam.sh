@@ -72,14 +72,40 @@ echo "To be quantified completed: ${to_process_count}"
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 echo "Batches created: ${num_batches}"
 
-sbatch --output "${output_dir}/logs/%A_%a.log" \
+# submit on either sherlock or scg
+if [ "${submit_on}" = 'sherlock' ]; then
+    # submit on sherlock
+    sbatch --output "${output_dir}/logs/%A_%a.log" \
+            --error "${output_dir}/logs/%A_%a.log" \
+            --array="1-${num_batches}%250" \
+            --time 6:00:00 \
+            --cpus-per-task="${step_size}" \
+            --partition normal,owners \
+            --mem=128G \
+            --tmp=200G \
+            --job-name qunatify_bam_batch \
+            ${code_dir}/quantify_bam_batch.sh \
+                --reference_dir ${reference_dir} \
+                --vcf_dir ${vcf_dir} \
+                --output_dir ${output_dir} \
+                --code_dir ${code_dir} \
+                --bam_list_paths ${bam_list_paths} \
+                --reference_fasta ${reference_fasta} \
+                --genes_gtf ${genes_gtf} \
+                --chr_sizes ${chr_sizes} \
+                --intervals_bed ${intervals_bed} \
+                --step_size ${step_size}
+elif [ "${submit_on}" = 'scg' ]; then
+    # submit on scg
+    sbatch --output "${output_dir}/logs/%A_%a.log" \
         --error "${output_dir}/logs/%A_%a.log" \
-        --array="1-${num_batches}%250" \
+        --array "1-${to_process_count}" \
         --time 6:00:00 \
-        --cpus-per-task="${step_size}" \
-        --partition normal,owners \
-        --mem=128G \
-        --tmp=200G \
+        --account smontgom \
+        --partition batch \
+        --cpus-per-task 1 \
+        --mem 64G \
+        --constraint="nvme" \
         --job-name qunatify_bam_batch \
         ${code_dir}/quantify_bam_batch.sh \
             --reference_dir ${reference_dir} \
@@ -92,4 +118,6 @@ sbatch --output "${output_dir}/logs/%A_%a.log" \
             --chr_sizes ${chr_sizes} \
             --intervals_bed ${intervals_bed} \
             --step_size ${step_size}
-
+else
+    echo "must submit on either 'sherlock' or 'scg'"
+fi

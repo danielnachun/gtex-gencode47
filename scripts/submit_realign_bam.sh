@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_test_bams.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -68,6 +68,7 @@ echo "Already completed: ${completed_count}"
 echo "To be quantified completed: ${to_process_count}"
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 echo "Batches created: ${num_batches}"
+
 # submit on either sherlock or scg
 if [ "${submit_on}" = 'sherlock' ]; then
     # submit on sherlock
