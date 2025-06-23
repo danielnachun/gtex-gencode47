@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/extract_vcfs_caudate.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/extract_vcfs_all_tissues.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -64,18 +64,38 @@ echo "Original participant count: ${original_count}"
 echo "Already completed: ${completed_count}"
 echo "To be processed: ${to_process_count}"
 
-
-sbatch --output "${output_dir}/logs/%A_%a.log" \
-    --error "${output_dir}/logs/%A_%a.log" \
-    --array "1-${to_process_count}%250" \
-    --time 4:00:00 \
-    --account smontgom \
-    --partition batch \
-    --cpus-per-task 1 \
-    --mem 64G \
-    --job-name participant_vcf \
-    ${code_dir}/extract_participant_vcfs.sh \
-        --participant_id_list ${new_participant_list} \
-        --full_vcf ${full_vcf} \
-        --output_dir ${output_dir} \
-        --code_dir ${code_dir}
+# submit on either sherlock or scg
+if [ "${submit_on}" = 'sherlock' ]; then
+    # submit on sherlock
+    sbatch --output "${output_dir}/logs/%A_%a.log" \
+        --error "${output_dir}/logs/%A_%a.log" \
+        --array "1-${to_process_count}%250" \
+        --time 4:00:00 \
+        --partition normal,owners \
+        --cpus-per-task 1 \
+        --mem 64G \
+        --job-name participant_vcf \
+        ${code_dir}/extract_participant_vcfs.sh \
+            --participant_id_list ${new_participant_list} \
+            --full_vcf ${full_vcf} \
+            --output_dir ${output_dir} \
+            --code_dir ${code_dir}
+elif [ "${submit_on}" = 'scg' ]; then
+    # submit on scg
+    sbatch --output "${output_dir}/logs/%A_%a.log" \
+        --error "${output_dir}/logs/%A_%a.log" \
+        --array "1-${to_process_count}%250" \
+        --time 4:00:00 \
+        --account smontgom \
+        --partition batch \
+        --cpus-per-task 1 \
+        --mem 64G \
+        --job-name participant_vcf \
+        ${code_dir}/extract_participant_vcfs.sh \
+            --participant_id_list ${new_participant_list} \
+            --full_vcf ${full_vcf} \
+            --output_dir ${output_dir} \
+            --code_dir ${code_dir}
+else
+    echo "must submit on either 'sherlock' or 'scg'"
+fi
