@@ -45,8 +45,6 @@ else
 fi
 
 completed_count=$((original_count - to_process_count))
-echo "Already completed: ${completed_count}"
-echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 
 # create a folder with a file per step, with one bam path per line in the file
 bam_list_folder="$output_dir/realign_sherlock_bam_file_lists"
@@ -65,24 +63,55 @@ echo "Batches created: ${num_batches}"
 if [ "${num_batches}" -gt "${max_array_size}" ]; then
     num_batches="${max_array_size}" 
 fi
-echo "Batches running: ${num_batches}"
 
-sbatch --output="${output_dir}/logs/%A_%a.log" \
-        --error="${output_dir}/logs/%A_%a.log" \
-        --array="1-${num_batches}%250" \
-        --time=48:00:00 \
-        --cpus-per-task="${step_size}" \
-        --partition=normal,owners \
-        --mem=128G \
-        --tmp=200G \
-        --job-name=realign_bam_batch \
-        ${code_dir}/realign_bam_batch.sh \
-            --reference_dir ${reference_dir} \
-            --vcf_dir ${vcf_dir} \
-            --output_dir ${output_dir} \
-            --code_dir ${code_dir} \
-            --bam_list_paths ${bam_list_paths} \
-            --reference_fasta ${reference_fasta} \
-            --rsem_ref_dir ${rsem_ref_dir} \
-            --star_index ${star_index} \
-            --step_size ${step_size}
+echo "Already completed: ${completed_count}"
+echo "To be quantified completed: ${to_process_count}"
+echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
+echo "Batches created: ${num_batches}"
+# submit on either sherlock or scg
+if [ "${submit_on}" = 'sherlock' ]; then
+    # submit on sherlock
+    sbatch --output="${output_dir}/logs/%A_%a.log" \
+           --error="${output_dir}/logs/%A_%a.log" \
+           --array="1-${num_batches}%250" \
+           --time=48:00:00 \
+           --cpus-per-task="${step_size}" \
+           --partition=normal,owners \
+           --mem=128G \
+           --tmp=200G \
+           --job-name=realign_bam_batch \
+           ${code_dir}/realign_bam_batch.sh \
+               --reference_dir ${reference_dir} \
+               --vcf_dir ${vcf_dir} \
+               --output_dir ${output_dir} \
+               --code_dir ${code_dir} \
+               --bam_list_paths ${bam_list_paths} \
+               --reference_fasta ${reference_fasta} \
+               --rsem_ref_dir ${rsem_ref_dir} \
+               --star_index ${star_index} \
+               --step_size ${step_size}
+elif [ "${submit_on}" = 'scg' ]; then
+    # submit on scg
+    sbatch --output="${output_dir}/logs/%A_%a.log" \
+           --error="${output_dir}/logs/%A_%a.log" \
+           --array="1-${to_process_count}%250" \
+           --time=200:00:00 \
+           --account=smontgom \
+           --partition=batch \
+           --cpus-per-task=1 \
+           --mem=256G \
+           --constraint="nvme" \
+           --job-name=realign_bam_batch \
+           ${code_dir}/realign_bam_batch.sh \
+               --reference_dir ${reference_dir} \
+               --vcf_dir ${vcf_dir} \
+               --output_dir ${output_dir} \
+               --code_dir ${code_dir} \
+               --bam_list_paths ${bam_list_paths} \
+               --reference_fasta ${reference_fasta} \
+               --rsem_ref_dir ${rsem_ref_dir} \
+               --star_index ${star_index} \
+               --step_size ${step_size}
+else
+    echo "must submit on either 'sherlock' or 'scg'"
+fi

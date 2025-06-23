@@ -11,3 +11,4 @@ regenerate_all=false
 # step limited by RAM availible on most sherlock nodes (~64G/bam needed)
 step_size=1
 max_array_size=1000
+submit_on=scg

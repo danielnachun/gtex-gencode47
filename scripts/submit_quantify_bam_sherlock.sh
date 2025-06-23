@@ -60,7 +60,7 @@ bam_list_paths="${output_dir}/quantify_sherlock_bam_list_paths.txt"
 rm -rf "${bam_list_paths}"
 printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
 num_batches=$(wc -l < "${bam_list_paths}")
-
+echo "Batches created: ${num_batches}"
 
 # Check if num_batches is greater than max_array_size
 if [ "${num_batches}" -gt "${max_array_size}" ]; then
@@ -71,7 +71,6 @@ echo "Already completed: ${completed_count}"
 echo "To be quantified completed: ${to_process_count}"
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 echo "Batches created: ${num_batches}"
-echo "Batches running: ${num_batches}"
 
 sbatch --output "${output_dir}/logs/%A_%a.log" \
         --error "${output_dir}/logs/%A_%a.log" \
