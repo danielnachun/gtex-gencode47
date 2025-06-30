@@ -25,20 +25,20 @@ echo "Original sample count: ${original_count}"
 
 
 # if true do all in gtex_ids
-# if false, do all in gtex ids that do not already have a regtools output in the leafcutter folder (that is the last step)
+# if false, do all in gtex ids that do not already have a rnaseqc output 
 regenerate_all=${regenerate_all:-false}
 if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
     bams_to_quantify="${full_bam_list}"
 else
-    # only quantify a bam if the regtools output does not already exist
+    # only quantify a bam if the rnaseqc output does not already exist
     bams_to_quantify=$(grep -v -F -f <(ls "${output_dir}/rnaseq_qc/" | sed "s|gene_tpm\.gct\.gz$|$bam_file_end|") <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
 fi
 
 # Check if bams_to_quantify is empty
 if [ -z "$bams_to_quantify" ]; then
     echo "To be processed: 0"
-    echo "All bams realigned"
+    echo "All bams null quantified"
     exit 0  # Exit the script with a success status
 else
     # If not empty, count the number of lines (bams to realign)

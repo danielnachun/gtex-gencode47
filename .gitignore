@@ -10,3 +10,5 @@ scripts/processing/.rattler/*
 data/*
 trash/*
 output/*
+
+gencode_caudate_collaberation/*

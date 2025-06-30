@@ -11,4 +11,4 @@ code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 regenerate_all=false
 step_size=1
 max_array_size=1000
-submit_on=scg
+submit_on=sherlock

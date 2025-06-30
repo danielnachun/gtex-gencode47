@@ -79,7 +79,7 @@ mkdir -p "${reference_dir_prefix}"
 rsync -PrhLtv "${reference_dir}"/* "${reference_dir_prefix}/"
 
 # run the batch
-cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup \
+cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup --verbose \
         "${code_dir}/realign_bam.sh" \
         --local_reference_dir "${reference_dir_prefix}/" \
         --vcf_dir "${vcf_dir}" \

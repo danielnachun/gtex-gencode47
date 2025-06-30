@@ -10,6 +10,9 @@ version = "0.1.0"
 bcftools = "1.15.*"
 samtools = "1.21.*"
 
+[feature.calledsites.dependencies]
+gatk4 = "4.6.*"
+
 [feature.realignbam.dependencies]
 bamsync = "gtex_v10.*"
 gtex-pipeline-rnaseq = "gtex_v10.*"
@@ -36,3 +39,4 @@ libc = "2.17"
 realignbam = ["realignbam"]
 quantifybam = ["quantifybam"]
 extractvcf = ["extractvcf"]
+calledsites = ["calledsites"]

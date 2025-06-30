@@ -148,9 +148,6 @@ bash ${code_dir}/run_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.A
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq
 
-# write out fastqs (for shuffling)
-mkdir -p ${dir_prefix}/tmp_fastq
-rsync -Prhltv ${dir_prefix}/tmp/fastq/ ${output_dir}/tmp_fastq
 
 # Check for VCF files and run star with WASP if the exist
 vcf_file=${participant_id}.snps.vcf.gz 
