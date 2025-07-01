@@ -92,7 +92,7 @@ echo "Step size: ${step_size}"
 echo "Requested CPUs: ${SLURM_CPUS_PER_TASK}"
 
 # run the batch
-cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup --verbose \
+cat "${bam_list}" | parallel -j"${step_size}" --ungroup --verbose \
         "${code_dir}/quantify_bam.sh" \
         --local_reference_dir "${reference_dir_prefix}/" \
         --vcf_dir "${vcf_dir}" \

@@ -56,7 +56,7 @@ mkdir -p ${output_dir}
 
 echo $(date +"[%b %d %H:%M:%S] Running ipafinder")
 
-IPAFinder_DetectIPA \
+IPAFinder_DetectIPA_population \
     -b ${duplicate_marked_bam} \
     -anno ${ipa_annotation} \
     -p 10 \

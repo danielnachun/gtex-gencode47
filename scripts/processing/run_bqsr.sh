@@ -85,7 +85,7 @@ gatk ApplyBQSR \
     -R ${reference_fasta} \
     -I ${split_bam} \
     --use-original-qualities \
-    -O ${output_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.split.recalibrated.bam \
+    -O ${output_dir}/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
     --bqsr-recal-file ${tmp_dir}/${sample_id}.recal_data.csv 
 
 echo $(date +"[%b %d %H:%M:%S] Done")
