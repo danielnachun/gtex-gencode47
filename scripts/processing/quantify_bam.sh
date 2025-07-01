@@ -43,6 +43,8 @@ options_array=(
     chr_sizes
     genes_gtf
     intervals_bed
+    ipa_annotation
+    editing_bed
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -71,6 +73,10 @@ while true; do
             genes_gtf="${2}"; shift 2 ;;
         --intervals_bed )
             intervals_bed="${2}"; shift 2 ;;
+        --ipa_annotation )
+            ipa_annotation="${2}"; shift 2 ;;
+        --editing_bed )
+            editing_bed="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -140,61 +146,83 @@ participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
-mkdir -p ${dir_prefix}/output/genome_bam
+mkdir -p ${dir_prefix}/references/genome_bam
 mkdir -p ${dir_prefix}/tmp
 
 # copy data to temp direcotry in compute node
-rsync -PrhLtv ${bam_file} ${dir_prefix}/output/genome_bam
-rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/output/genome_bam
+rsync -PrhLtv ${bam_file} ${dir_prefix}/references/genome_bam
+rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 
-# run rnaseq qc
-bash ${code_dir}/run_rnaseq_qc.sh \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --genes_gtf ${local_reference_dir}/${genes_gtf} \
-    --genome_fasta ${local_reference_dir}/${reference_fasta} \
-    --intervals_bed ${local_reference_dir}/${intervals_bed} \
+# # run rnaseq qc
+# bash ${code_dir}/run_rnaseq_qc.sh \
+#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#     --genes_gtf ${local_reference_dir}/${genes_gtf} \
+#     --genome_fasta ${local_reference_dir}/${reference_fasta} \
+#     --intervals_bed ${local_reference_dir}/${intervals_bed} \
+#     --sample_id ${sample_id} \
+#     --output_dir ${dir_prefix}/output/rnaseq_qc
+
+# # run coverage
+# bash ${code_dir}/run_bam_to_coverage.sh \
+#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#     --chr_sizes ${local_reference_dir}/${chr_sizes} \
+#     --sample_id ${sample_id} \
+#     --output_dir ${dir_prefix}/output/coverage
+
+
+# # Check for VCF files and run GATK only if they exist
+# vcf_file=${participant_id}.snps.vcf.gz 
+# vcf_index=${participant_id}.snps.vcf.gz.tbi
+# vcf_path="${vcf_dir}/${vcf_file}"
+# vcf_index_path="${vcf_dir}/${vcf_index}"
+
+# if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
+#     echo "VCF files found. Running GATK step..."
+#     vcf_dir_tmp=${dir_prefix}/vcfs
+#     mkdir -p ${vcf_dir_tmp}
+#     rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
+#     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
+
+#     # run gatk
+#     bash ${code_dir}/run_gatk.sh \
+#         --sample_id ${sample_id} \
+#         --dir_prefix ${dir_prefix} \
+#         --genome_fasta ${local_reference_dir}/${reference_fasta} \
+#         --vcf_dir ${vcf_dir} \
+#         --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#         --output_dir ${dir_prefix}/output/gatk
+# else
+#     echo "Warning: Skipping GATK step because the required VCF files are missing."
+# fi
+
+# # run regtools
+# bash ${code_dir}/run_regtools.sh \
+#     --sample_id ${sample_id} \
+#     --dir_prefix ${dir_prefix} \
+#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#     --output_dir ${dir_prefix}/output/leafcutter
+
+
+# run ipafinder
+bash ${code_dir}/run_ipafinder.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/output/rnaseq_qc
+    --ipa_annotation ${local_reference_dir}/${ipa_annotation} \
+    --output_dir ${dir_prefix}/output/ipafinder
 
-# run coverage
-bash ${code_dir}/run_bam_to_coverage.sh \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --chr_sizes ${local_reference_dir}/${chr_sizes} \
+# run fraser quantification
+bash ${code_dir}/run_fraser.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/output/coverage
+    --output_dir ${dir_prefix}/output/fraser
 
-
-# Check for VCF files and run GATK only if they exist
-vcf_file=${participant_id}.snps.vcf.gz 
-vcf_index=${participant_id}.snps.vcf.gz.tbi
-vcf_path="${vcf_dir}/${vcf_file}"
-vcf_index_path="${vcf_dir}/${vcf_index}"
-
-if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
-    echo "VCF files found. Running GATK step..."
-    vcf_dir_tmp=${dir_prefix}/vcfs
-    mkdir -p ${vcf_dir_tmp}
-    rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
-    rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
-
-    # run gatk
-    bash ${code_dir}/run_gatk.sh \
-        --sample_id ${sample_id} \
-        --dir_prefix ${dir_prefix} \
-        --genome_fasta ${local_reference_dir}/${reference_fasta} \
-        --vcf_dir ${vcf_dir} \
-        --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-        --output_dir ${dir_prefix}/output/gatk
-else
-    echo "Warning: Skipping GATK step because the required VCF files are missing."
-fi
-
-
-# run regtools
-bash ${code_dir}/run_regtools.sh \
+# run edsite quantification
+bash ${code_dir}/run_edsite_pileup.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
-    --dir_prefix ${dir_prefix} \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --output_dir ${dir_prefix}/output/leafcutter
+    --reference_fasta ${local_reference_dir}/${reference_fasta} \
+    --editing_bed ${local_reference_dir}/${editing_bed} \
+    --output_dir ${dir_prefix}/output/edsite_pileup
 
+# copy out results
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}

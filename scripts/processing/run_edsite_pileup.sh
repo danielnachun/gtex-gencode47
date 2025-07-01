@@ -24,14 +24,15 @@ check_for_directory() {
 options_array=(
     duplicate_marked_bam
     sample_id
-    ipa_annotation
+    reference_fasta
+    editing_bed
     output_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 
 # Parse command line arguments with getopt
-arguments=$(getopt --options a --longoptions "${longoptions}" --name 'ipa_finder' -- "$@")
+arguments=$(getopt --options a --longoptions "${longoptions}" --name 'edsite_pileup' -- "$@")
 eval set -- "${arguments}"
 
 while true; do
@@ -40,8 +41,10 @@ while true; do
             duplicate_marked_bam="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --sample_id )
             sample_id="${2}"; shift 2 ;;
-        --ipa_annotation )
-            ipa_annotation="${2}"; shift 2 ;;
+        --reference_fasta )
+            reference_fasta="${2}"; shift 2 ;;
+        --editing_bed )
+            editing_bed="${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --)
@@ -54,13 +57,20 @@ done
 
 mkdir -p ${output_dir}
 
-echo $(date +"[%b %d %H:%M:%S] Running ipafinder")
+echo $(date +"[%b %d %H:%M:%S] Running edsite quantification wtih samtools")
 
-IPAFinder_DetectIPA \
-    -b ${duplicate_marked_bam} \
-    -anno ${ipa_annotation} \
-    -p 10 \
-    -o ${output_dir}/${sample_id}.ipafinder_events.txt
+samtools mpileup \
+    -A \
+    -B \
+    -d 1000000 \
+    -q 255 \
+    -Q 20 \
+    -f ${reference_fasta} \
+    -l ${editing_bed} \
+    ${duplicate_marked_bam} \
+    -o ${output_dir}/${sample_id}.edsites.pileup
+
+echo $(date +"[%b %d %H:%M:%S] Done")
 
 
 

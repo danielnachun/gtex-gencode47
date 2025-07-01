@@ -31,6 +31,8 @@ options_array=(
     chr_sizes
     genes_gtf
     intervals_bed
+    ipa_annotation
+    editing_bed
     step_size
 )
 
@@ -61,6 +63,10 @@ while true; do
             genes_gtf="${2}"; shift 2 ;;
         --intervals_bed )
             intervals_bed="${2}"; shift 2 ;;
+        --ipa_annotation )
+            ipa_annotation="${2}"; shift 2 ;;
+        --editing_bed )
+            editing_bed="${2}"; shift 2 ;;
         --step_size )
             step_size="${2}"; shift 2 ;;
         --)
@@ -96,6 +102,8 @@ cat "${bam_list}" | parallel -j"${step_size}" --eta --ungroup --verbose \
         --reference_fasta "${reference_fasta}" \
         --chr_sizes "${chr_sizes}" \
         --genes_gtf "${genes_gtf}" \
-        --intervals_bed "${intervals_bed} "
+        --intervals_bed "${intervals_bed}" \
+        --ipa_annotation "${ipa_annotation}" \
+        --editing_bed "${editing_bed}" \        
 
 echo "Batch finished"

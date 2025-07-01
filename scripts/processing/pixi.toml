@@ -30,6 +30,8 @@ kent-tools = "472.*"
 regtools = "1.0.*"
 rnaseqc = "2.4.2.*"
 samtools = "1.21.*"
+ipafinder = "1.0.*"
+bioconductor-fraser = "2.2.*"
 
 [system-requirements]
 linux = "3.10"

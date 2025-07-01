@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_all_tissues.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/test/quantify_test_bams.sh"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -25,14 +25,14 @@ echo "Original sample count: ${original_count}"
 
 
 # if true do all in gtex_ids
-# if false, do all in gtex ids that do not already have a regtools output in the leafcutter folder (that is the last step)
+# if false, do all in gtex ids that do not already have a pileup output in the edsites_pileup folder (that is the last step)
 regenerate_all=${regenerate_all:-false}
 if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
     bams_to_quantify="${full_bam_list}"
 else
-    # only quantify a bam if the regtools output does not already exist
-    bams_to_quantify=$(grep -v -F -f <(ls "${output_dir}/leafcutter/" | sed 's|\.regtools_junc\.txt\.gz$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
+    # only quantify a bam if the pileup output does not already exist
+    bams_to_quantify=$(grep -v -F -f <(ls "${output_dir}/edsite_pileup/" | sed 's|\.edsites\.pileup$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
 fi
 
 # Check if bams_to_quantify is empty
@@ -94,6 +94,8 @@ if [ "${submit_on}" = 'sherlock' ]; then
                 --genes_gtf ${genes_gtf} \
                 --chr_sizes ${chr_sizes} \
                 --intervals_bed ${intervals_bed} \
+                --ipa_annotation ${ipa_annotation} \
+                --editing_bed ${editing_bed} \
                 --step_size ${step_size}
 elif [ "${submit_on}" = 'scg' ]; then
     # submit on scg

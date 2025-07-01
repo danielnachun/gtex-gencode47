@@ -92,7 +92,7 @@ activate_pixi_env() {
     # TODO make pixi
     if eval "$(pixi shell-hook --environment calledsites --manifest-path ${code_dir}/pixi.toml)"; then
         # Check if environment was properly activated 
-        if command -v rnaseqc >/dev/null 2>&1; then
+        if command -v gatk >/dev/null 2>&1; then
             echo "Successfully activated pixi environment"
             return 0
         else
@@ -160,7 +160,7 @@ bash ${code_dir}/run_split_reads.sh \
 # 1 hour 15 minute run time
 # then 22 minute run time
 bash ${code_dir}/run_bqsr.sh \
-    --split_bam ${dir_prefix}tmp/split_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.split.bam \
+    --split_bam ${dir_prefix}/tmp/split_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.split.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --dbsnp ${local_reference_dir}/${dbsnp} \

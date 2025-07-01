@@ -22,7 +22,7 @@ check_for_directory() {
 }
 
 options_array=(
-    duplicate_marked_bam
+    split_bam
     sample_id
     reference_fasta
     dbsnp
