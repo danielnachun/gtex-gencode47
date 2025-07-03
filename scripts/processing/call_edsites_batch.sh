@@ -25,12 +25,14 @@ options_array=(
     reference_dir
     output_dir
     code_dir
+    vcf_dir
     bam_list_paths
     reference_fasta
     dbsnp
     indels_mills
     indels_decoy
     gene_intervals_bed
+    full_vcf_file
     step_size
 )
 
@@ -49,6 +51,8 @@ while true; do
             output_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --vcf_dir )
+            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --bam_list_paths )
             bam_list_paths="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
@@ -61,6 +65,8 @@ while true; do
             indels_decoy="${2}"; shift 2 ;;
         --gene_intervals_bed )
             gene_intervals_bed="${2}"; shift 2 ;;
+        --full_vcf_file )
+            full_vcf_file="${2}"; shift 2 ;;            
         --step_size )
             step_size="${2}"; shift 2 ;;
         --)
@@ -90,11 +96,13 @@ cat "${bam_list}" | parallel -j"${step_size}" --ungroup --verbose \
         --local_reference_dir "${reference_dir_prefix}/" \
         --output_dir "${output_dir}" \
         --code_dir "${code_dir}" \
+        --vcf_dir "${vcf_dir}" \
         --bam_file {} \
         --reference_fasta "${reference_fasta}" \
         --dbsnp "${dbsnp}" \
         --indels_mills "${indels_mills}" \
         --indels_decoy "${indels_decoy} " \
-        --gene_intervals_bed "${gene_intervals_bed} " 
+        --gene_intervals_bed "${gene_intervals_bed}" \
+        --full_vcf_file "${full_vcf_file}" 
 
 echo "Batch finished"

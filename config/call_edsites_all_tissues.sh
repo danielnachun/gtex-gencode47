@@ -1,17 +1,17 @@
 # sample args for quantifying 3 test bams
 realign_bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues/genome_bam
-gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/other_references/test_bams/test_bams_samples.txt
+gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/other_references/all_tissues/all_samples.txt
 reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references
 reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta
 dbsnp=All_20180418.vcf.gz
 indels_mills=Mills_and_1000G_gold_standard.indels.hg38.sites.vcf
 indels_decoy=Homo_sapiens_assembly38_1000genomes_decoy.known_indels.vcf
 gene_intervals_bed=gencode.v47.merged.bed
-output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/test_bams/output_kate
+output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues/
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 full_vcf_file=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/realign_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.vcf.gz
 regenerate_all=true
-step_size=1
+step_size=4
 max_array_size=1000
 submit_on=sherlock

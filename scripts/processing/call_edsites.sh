@@ -37,12 +37,14 @@ options_array=(
     local_reference_dir
     output_dir
     code_dir
+    vcf_dir
     bam_file
     reference_fasta
     dbsnp
     indels_mills
     indels_decoy
     gene_intervals_bed
+    full_vcf_file
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -59,6 +61,8 @@ while true; do
             output_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --vcf_dir )
+            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --bam_file )
             bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
@@ -71,6 +75,8 @@ while true; do
             indels_decoy="${2}"; shift 2 ;;
         --gene_intervals_bed )
             gene_intervals_bed="${2}"; shift 2 ;;
+        --full_vcf_file )
+            full_vcf_file="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -168,6 +174,40 @@ bash ${code_dir}/run_bqsr.sh \
     --indels_decoy ${local_reference_dir}/${indels_decoy} \
     --tmp_dir ${dir_prefix}/tmp/bqsr_recal_data \
     --output_dir ${dir_prefix}/output/bqsr
+
+
+# Check for VCF files and run mutect with participant vcf if it exists, otherwise full vcf
+vcf_file=${participant_id}.snps.vcf.gz 
+vcf_index=${participant_id}.snps.vcf.gz.tbi
+vcf_path="${vcf_dir}/${vcf_file}"
+vcf_index_path="${vcf_dir}/${vcf_index}"
+
+if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
+    echo "VCF files found. Running MUTECT2 with PON from participant VCF..."
+    vcf_dir_tmp=${dir_prefix}/vcfs
+    mkdir -p ${vcf_dir_tmp}
+    rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
+    rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
+
+    bash ${code_dir}/run_mutect.sh \
+        --bqsr_bam ${dir_prefix}/output/bqsr/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
+        --sample_id ${sample_id} \
+        --reference_fasta ${local_reference_dir}/${reference_fasta} \
+        --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
+        --vcf_file ${vcf_dir_tmp}/${vcf_file} \
+        --output_dir ${dir_prefix}/output/mutect
+
+else
+    echo "Warning: VCF files not found, running MUTECT with PON from all participant combined VCF ..."
+    bash ${code_dir}/run_mutect.sh \
+        --bqsr_bam ${dir_prefix}/output/bqsr/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
+        --sample_id ${sample_id} \
+        --reference_fasta ${local_reference_dir}/${reference_fasta} \
+        --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
+        --vcf_file ${local_reference_dir}/${full_vcf_file} \
+        --output_dir ${dir_prefix}/output/mutect
+fi
+
 
 # 44 minute run time
 bash ${code_dir}/run_haplotype_caller.sh \

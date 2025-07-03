@@ -146,7 +146,7 @@ participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
-mkdir -p ${dir_prefix}/references/genome_bam
+mkdir -p ${dir_prefix}/references/genome_bfam
 mkdir -p ${dir_prefix}/tmp
 
 # copy data to temp direcotry in compute node
@@ -202,6 +202,20 @@ rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 #     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
 #     --output_dir ${dir_prefix}/output/leafcutter
 
+# run edsite quantification
+bash ${code_dir}/run_edsite_pileup.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --sample_id ${sample_id} \
+    --reference_fasta ${local_reference_dir}/${reference_fasta} \
+    --editing_bed ${local_reference_dir}/${editing_bed} \
+    --output_dir ${dir_prefix}/output/edsite_pileup
+
+# run fraser quantification
+bash ${code_dir}/run_fraser.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --sample_id ${sample_id} \
+    --output_dir ${dir_prefix}/output/fraser \
+    --code_dir ${code_dir} 
 
 # run ipafinder
 bash ${code_dir}/run_ipafinder.sh \
@@ -210,19 +224,6 @@ bash ${code_dir}/run_ipafinder.sh \
     --ipa_annotation ${local_reference_dir}/${ipa_annotation} \
     --output_dir ${dir_prefix}/output/ipafinder
 
-# run fraser quantification
-bash ${code_dir}/run_fraser.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/output/fraser
-
-# run edsite quantification
-bash ${code_dir}/run_edsite_pileup.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --sample_id ${sample_id} \
-    --reference_fasta ${local_reference_dir}/${reference_fasta} \
-    --editing_bed ${local_reference_dir}/${editing_bed} \
-    --output_dir ${dir_prefix}/output/edsite_pileup
 
 # copy out results
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}

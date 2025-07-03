@@ -26,7 +26,7 @@ options_array=(
     sample_id
     reference_fasta
     gene_intervals_bed
-    dbsnp
+    vcf_file
     output_dir
 )
 
@@ -46,8 +46,8 @@ while true; do
             reference_fasta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --gene_intervals_bed )
             gene_intervals_bed="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --dbsnp )
-            dbsnp="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --vcf_file )
+            vcf_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --)
@@ -60,15 +60,23 @@ done
 
 mkdir -p ${output_dir}
 
-echo $(date +"[%b %d %H:%M:%S] Running HaplotypeCaller for ${sample_id}")
+echo $(date +"[%b %d %H:%M:%S] Running Mutect2 for ${sample_id}")
 
-gatk HaplotypeCaller \
-    -R ${reference_fasta} \
-    -I ${bqsr_bam} \
-    -L ${gene_intervals_bed} \
-    -O ${output_dir}/${sample_id}.hc.vcf.gz \
-    -dont-use-soft-clipped-bases \
-    --standard-min-confidence-threshold-for-calling 0 \
-    --dbsnp ${dbsnp}
+gatk Mutect2 \
+    --input "${bqsr_bam}" \
+    --output "${output_dir}/${sample_id}.mutect2.vcf" \
+    --reference "${reference_fasta}" \
+    --intervals "${gene_intervals_bed}" \
+    --dont-use-soft-clipped-bases \
+    --panel-of-normals "${vcf_file}" 
 
 echo $(date +"[%b %d %H:%M:%S] Done")
+
+# bash scripts/processing/run_mutect.sh \
+#     --bqsr_bam /home/klawren/oak/gtex/output/test_bams/output_kate/bqsr/GTEX-1C4CL-2126-SM-7IGQC.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
+#     --sample_id GTEX-1C4CL-2126-SM-7IGQC \
+#     --reference_fasta /home/klawren/oak/gtex/data/edsite_references/Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta \
+#     --gene_intervals_bed /home/klawren/oak/gtex/data/edsite_references/gencode.v47.merged.bed \
+#     --vcf_file /home/klawren/oak/gtex/data/processed/vcfs/GTEX-1C4CL.snps.het.vcf.gz \
+#     --output_dir /home/klawren/oak/gtex/output/test_bams/output_kate/mutect
+

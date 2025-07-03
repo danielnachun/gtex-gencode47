@@ -25,6 +25,7 @@ options_array=(
     duplicate_marked_bam
     sample_id
     output_dir
+    code_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -41,6 +42,8 @@ while true; do
             sample_id="${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
+        --code_dir )
+            code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -53,8 +56,8 @@ mkdir -p ${output_dir}
 
 echo $(date +"[%b %d %H:%M:%S] Running FRASER2")
 
-Rscript fraser_quantification.R \
-    -${duplicate_marked_bam} \
+Rscript ${code_dir}/fraser_quantification.R \
+    ${duplicate_marked_bam} \
     ${output_dir} \
     ${sample_id}.fraser.rds
 
