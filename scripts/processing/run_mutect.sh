@@ -68,7 +68,9 @@ gatk Mutect2 \
     --reference "${reference_fasta}" \
     --intervals "${gene_intervals_bed}" \
     --dont-use-soft-clipped-bases \
-    --panel-of-normals "${vcf_file}" 
+    --panel-of-normals "${vcf_file}" \
+    --f1r2-tar-gz "${output_dir}/${sample_id}.f1r2.tar.gz" \
+    --annotation OrientationBiasReadCounts
 
 echo $(date +"[%b %d %H:%M:%S] Done")
 

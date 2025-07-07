@@ -59,7 +59,7 @@ echo $(date +"[%b %d %H:%M:%S] Running ipafinder")
 IPAFinder_DetectIPA_population \
     -b ${duplicate_marked_bam} \
     -anno ${ipa_annotation} \
-    -p 10 \
+    -p 1 \
     -o ${output_dir}/${sample_id}.ipafinder_events.txt
 
 
