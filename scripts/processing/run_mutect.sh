@@ -70,15 +70,12 @@ gatk Mutect2 \
     --dont-use-soft-clipped-bases \
     --panel-of-normals "${vcf_file}" \
     --f1r2-tar-gz "${output_dir}/${sample_id}.f1r2.tar.gz" \
-    --annotation OrientationBiasReadCounts
+    -A OrientationBiasReadCounts \
+    -A ReadPosRankSumTest \
+    -A MappingQualityRankSumTest \
+    -A RMSMappingQuality \
+    -A QualByDepth \
+    -A FragmentLength
 
 echo $(date +"[%b %d %H:%M:%S] Done")
-
-# bash scripts/processing/run_mutect.sh \
-#     --bqsr_bam /home/klawren/oak/gtex/output/test_bams/output_kate/bqsr/GTEX-1C4CL-2126-SM-7IGQC.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
-#     --sample_id GTEX-1C4CL-2126-SM-7IGQC \
-#     --reference_fasta /home/klawren/oak/gtex/data/edsite_references/Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta \
-#     --gene_intervals_bed /home/klawren/oak/gtex/data/edsite_references/gencode.v47.merged.bed \
-#     --vcf_file /home/klawren/oak/gtex/data/processed/vcfs/GTEX-1C4CL.snps.het.vcf.gz \
-#     --output_dir /home/klawren/oak/gtex/output/test_bams/output_kate/mutect
 

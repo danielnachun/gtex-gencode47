@@ -67,8 +67,13 @@ gatk HaplotypeCaller \
     -I ${bqsr_bam} \
     -L ${gene_intervals_bed} \
     -O ${output_dir}/${sample_id}.hc.vcf.gz \
+    -A ReadPosition \
+    -A FragmentLength \
     -dont-use-soft-clipped-bases \
     --standard-min-confidence-threshold-for-calling 0 \
+    --min-base-quality-score 20 \
     --dbsnp ${dbsnp}
 
 echo $(date +"[%b %d %H:%M:%S] Done")
+
+

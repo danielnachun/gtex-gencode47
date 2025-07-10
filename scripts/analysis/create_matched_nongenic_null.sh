@@ -10,7 +10,7 @@ ALL_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v39.annotation.g
 CHROM_SIZES="/home/klawren/oak/gtex/data/realign_references/GRCh38.chrsizes"
 TMP_DIR="/home/klawren/oak/gtex/data/other_references/nongenic_null_v10"
 
-# pull out exons
+# pull out all exons
 awk -v OFS='\t' '$3=="exon" {
     # extract exon_id and gene_id
     match($0, /exon_id "([^"]+)"/, eid)
@@ -19,7 +19,7 @@ awk -v OFS='\t' '$3=="exon" {
 }' "${ALL_GTF}" | \
     bedtools sort -i - > "${TMP_DIR}/all_exons.bed"
 
-# pull out exons
+# pull out exons from the non-overlapping gene file used in rnqseqc
 awk -v OFS='\t' '$3=="exon" {
     # extract exon_id and gene_id
     match($0, /exon_id "([^"]+)"/, eid)
