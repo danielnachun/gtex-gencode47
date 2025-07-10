@@ -45,6 +45,7 @@ options_array=(
     indels_decoy
     gene_intervals_bed
     full_vcf_file
+    exac_reference
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -77,6 +78,8 @@ while true; do
             gene_intervals_bed="${2}"; shift 2 ;;
         --full_vcf_file )
             full_vcf_file="${2}"; shift 2 ;;
+        --exac_reference )
+            exac_reference="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -174,6 +177,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
         --reference_fasta ${local_reference_dir}/${reference_fasta} \
         --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
         --vcf_file ${vcf_dir_tmp}/${vcf_file} \
+        --exac_reference ${local_reference_dir}/${exac_reference} \
         --output_dir ${dir_prefix}/output/mutect_prerecalibration
 
 else
@@ -184,6 +188,7 @@ else
         --reference_fasta ${local_reference_dir}/${reference_fasta} \
         --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
         --vcf_file ${local_reference_dir}/${full_vcf_file} \
+        --exac_reference ${local_reference_dir}/${exac_reference} \
         --output_dir ${dir_prefix}/output/mutect_prerecalibration
 fi
 
@@ -239,6 +244,7 @@ else
         --reference_fasta ${local_reference_dir}/${reference_fasta} \
         --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
         --vcf_file ${local_reference_dir}/${full_vcf_file} \
+        --exac_reference ${local_reference_dir}/${exac_reference} \
         --output_dir ${dir_prefix}/output/mutect
 fi
 
@@ -251,6 +257,5 @@ bash ${code_dir}/run_haplotype_caller.sh \
     --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
     --dbsnp ${local_reference_dir}/${dbsnp} \
     --output_dir ${dir_prefix}/output/haplotype_caller
-
 
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}

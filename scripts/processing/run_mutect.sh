@@ -27,6 +27,7 @@ options_array=(
     reference_fasta
     gene_intervals_bed
     vcf_file
+    exac_reference
     output_dir
 )
 
@@ -48,6 +49,8 @@ while true; do
             gene_intervals_bed="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --vcf_file )
             vcf_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --exac_reference )
+            exac_reference="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --)
@@ -76,6 +79,41 @@ gatk Mutect2 \
     -A RMSMappingQuality \
     -A QualByDepth \
     -A FragmentLength
+
+
+echo $(date +"[%b %d %H:%M:%S] Getting pileup summaries.")
+gatk GetPileupSummaries \
+    --input "${bqsr_bam}" \
+    --variant "${exac_reference}" \
+    --intervals "${exac_reference}" \
+    --reference "${reference_fasta}" \
+    --output ${output_dir}/${sample_id}.pileups.table
+
+echo $(date +"[%b %d %H:%M:%S] Calculating cross sample contamination.")
+gatk CalculateContamination \
+        --input "${output_dir}/${sample_id}.pileups.table" \
+        --output "${output_dir}/${sample_id}.contamination.table"
+
+
+echo $(date +"[%b %d %H:%M:%S] Learning read orinetation bias model.")
+gatk LearnReadOrientationModel \
+        --input ${output_dir}/${sample_id}.f1r2.tar.gz \
+        --output ${output_dir}/${sample_id}.artifact_prior.tar.gz
+
+    
+echo $(date +"[%b %d %H:%M:%S] Filtering somatic variants with FilterMutectCalls.")
+gatk FilterMutectCalls \
+        --variant "${output_dir}/${sample_id}.mutect2.vcf" \
+        --output "${output_dir}/${sample_id}.mutect2.filtered.vcf" \
+        --contamination-table "${output_dir}/${sample_id}.contamination.table" \
+        --ob-priors  "${output_dir}/${sample_id}.artifact_prior.tar.gz" \
+        --reference "${reference_fasta}" \
+        --min-median-base-quality 20 \
+        --max-alt-allele-count 1 \
+        --min-median-read-position 6 \
+        --unique-alt-read-count 3 \
+        --read-filter NotSupplementaryAlignmentReadFilter 
+
 
 echo $(date +"[%b %d %H:%M:%S] Done")
 

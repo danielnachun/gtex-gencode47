@@ -74,6 +74,14 @@ gatk HaplotypeCaller \
     --min-base-quality-score 20 \
     --dbsnp ${dbsnp}
 
+
+echo $(date +"[%b %d %H:%M:%S] Filtering HaplotypeCaller")
+bcftools view ${output_dir}/${sample_id}.hc.vcf.gz \
+    --include "INFO/DP>=10 & MQ>=40 & MQRankSum>=-12.5 & QD>=2 & ReadPosRankSum>=-8 & ReadPosRankSum<8 & AD > 3 & MPOS > 6" \
+    --min-alleles 2 \
+    --max-alleles 2 \
+    --output ${output_dir}/${sample_id}.hc_filtered.vcf.gz
+
 echo $(date +"[%b %d %H:%M:%S] Done")
 
 

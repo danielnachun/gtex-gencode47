@@ -33,6 +33,7 @@ options_array=(
     indels_decoy
     gene_intervals_bed
     full_vcf_file
+    exac_reference
     step_size
 )
 
@@ -66,7 +67,9 @@ while true; do
         --gene_intervals_bed )
             gene_intervals_bed="${2}"; shift 2 ;;
         --full_vcf_file )
-            full_vcf_file="${2}"; shift 2 ;;            
+            full_vcf_file="${2}"; shift 2 ;;   
+        --exac_reference )
+            exac_reference="${2}"; shift 2 ;;            
         --step_size )
             step_size="${2}"; shift 2 ;;
         --)
@@ -103,6 +106,7 @@ cat "${bam_list}" | parallel -j"${step_size}" --ungroup --verbose \
         --indels_mills "${indels_mills}" \
         --indels_decoy "${indels_decoy} " \
         --gene_intervals_bed "${gene_intervals_bed}" \
-        --full_vcf_file "${full_vcf_file}" 
+        --full_vcf_file "${full_vcf_file}" \
+        --exac_reference "${exac_reference}"
 
 echo "Batch finished"
