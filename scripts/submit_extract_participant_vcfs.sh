@@ -4,12 +4,8 @@ set -o xtrace -o nounset -o errexit
 
 # source the config file
 CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/extract_vcfs_all_tissues.sh"
-if [[ -f "$CONFIG_FILE" ]]; then
-    source "$CONFIG_FILE"
-else
-    echo "Error: Config file $CONFIG_FILE not found!"
-    exit 1
-fi
+[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
+
 
 # Check for duplicates in participant_id_list, duplicated can cuase errors as files colide
 if [ $(sort "${participant_id_list}" | uniq -d | wc -l) -gt 0 ]; then
@@ -22,7 +18,6 @@ fi
 # if false, do all in participant_id_list that do not already vcfs and vcf indexs
 regenerate_all=false
 
-mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
 
 

@@ -3,16 +3,9 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/test/quantify_test_bams.sh"
-if [[ -f "$CONFIG_FILE" ]]; then
-    source "$CONFIG_FILE"
-else
-    echo "Error: Config file $CONFIG_FILE not found!"
-    exit 1
-fi
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/quantify_all_tissues.sh"
+[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
-
-mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
 
 
@@ -48,7 +41,6 @@ fi
 
 completed_count=$((original_count - to_process_count))
 
-
 # create a folder with a file per step, with one bam path per line in the file
 bam_list_folder="$output_dir/file_lists_quantify"
 rm -rf "${bam_list_folder}"
@@ -72,54 +64,98 @@ echo "To be quantified: ${to_process_count}"
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 echo "Batches created: ${num_batches}"
 
-# submit on either sherlock or scg
+
+sbatch_params=(
+    --output "${output_dir}/logs_quantify/%A_%a.log"
+    --error "${output_dir}/logs_quantify/%A_%a.log"
+    --array "1-${num_batches}%250"
+    --time 6:00:00
+    --cpus-per-task "${step_size}"
+    --mem 128G
+    --job-name quantify_bam_batch
+    ${code_dir}/quantify_bam_batch.sh
+        --reference_dir ${reference_dir}
+        --vcf_dir ${vcf_dir}
+        --output_dir ${output_dir}
+        --code_dir ${code_dir}
+        --bam_list_paths ${bam_list_paths}
+        --reference_fasta ${reference_fasta}
+        --genes_gtf ${genes_gtf}
+        --chr_sizes ${chr_sizes}
+        --intervals_bed ${intervals_bed}
+        --ipa_annotation ${ipa_annotation}
+        --editing_bed ${editing_bed}
+        --step_size ${step_size}
+)
+
+# Submit on either sherlock or scg
 if [ "${submit_on}" = 'sherlock' ]; then
-    # submit on sherlock
-    sbatch --output "${output_dir}/logs_quantify/%A_%a.log" \
-            --error "${output_dir}/logs_quantify/%A_%a.log" \
-            --array="1-${num_batches}%250" \
-            --time 48:00:00 \
-            --cpus-per-task="${step_size}" \
-            --partition normal,owners \
-            --mem=128G \
-            --tmp=200G \
-            --job-name qunatify_bam_batch \
-            ${code_dir}/quantify_bam_batch.sh \
-                --reference_dir ${reference_dir} \
-                --vcf_dir ${vcf_dir} \
-                --output_dir ${output_dir} \
-                --code_dir ${code_dir} \
-                --bam_list_paths ${bam_list_paths} \
-                --reference_fasta ${reference_fasta} \
-                --genes_gtf ${genes_gtf} \
-                --chr_sizes ${chr_sizes} \
-                --intervals_bed ${intervals_bed} \
-                --ipa_annotation ${ipa_annotation} \
-                --editing_bed ${editing_bed} \
-                --step_size ${step_size}
+    # Additional parameters for sherlock
+    sbatch \
+        --partition normal,owners \
+        --tmp 200G \
+        "${sbatch_params[@]}" 
 elif [ "${submit_on}" = 'scg' ]; then
-    # submit on scg
-    sbatch --output "${output_dir}/logs_quantify/%A_%a.log" \
-        --error "${output_dir}/logs_quantify/%A_%a.log" \
-        --array "1-${to_process_count}" \
-        --time 6:00:00 \
+    # Additional parameters for scg
+    sbatch \
         --account smontgom \
         --partition batch \
-        --cpus-per-task 1 \
-        --mem 64G \
         --constraint="nvme" \
-        --job-name qunatify_bam_batch \
-        ${code_dir}/quantify_bam_batch.sh \
-            --reference_dir ${reference_dir} \
-            --vcf_dir ${vcf_dir} \
-            --output_dir ${output_dir} \
-            --code_dir ${code_dir} \
-            --bam_list_paths ${bam_list_paths} \
-            --reference_fasta ${reference_fasta} \
-            --genes_gtf ${genes_gtf} \
-            --chr_sizes ${chr_sizes} \
-            --intervals_bed ${intervals_bed} \
-            --step_size ${step_size}
+        "${sbatch_params[@]}" 
 else
     echo "must submit on either 'sherlock' or 'scg'"
 fi
+
+# # submit on either sherlock or scg
+# if [ "${submit_on}" = 'sherlock' ]; then
+#     # submit on sherlock
+#     sbatch --output "${output_dir}/logs_quantify/%A_%a.log" \
+#             --error "${output_dir}/logs_quantify/%A_%a.log" \
+#             --array "1-${num_batches}%250" \
+#             --time 6:00:00 \
+#             --cpus-per-task "${step_size}" \
+#             --partition normal,owners \
+#             --mem 128G \
+#             --tmp 200G \
+#             --job-name quantify_bam_batch \
+#             ${code_dir}/quantify_bam_batch.sh \
+#                 --reference_dir ${reference_dir} \
+#                 --vcf_dir ${vcf_dir} \
+#                 --output_dir ${output_dir} \
+#                 --code_dir ${code_dir} \
+#                 --bam_list_paths ${bam_list_paths} \
+#                 --reference_fasta ${reference_fasta} \
+#                 --genes_gtf ${genes_gtf} \
+#                 --chr_sizes ${chr_sizes} \
+#                 --intervals_bed ${intervals_bed} \
+#                 --ipa_annotation ${ipa_annotation} \
+#                 --editing_bed ${editing_bed} \
+#                 --step_size ${step_size}
+# elif [ "${submit_on}" = 'scg' ]; then
+#     # submit on scg
+#     sbatch --output "${output_dir}/logs_quantify/%A_%a.log" \
+#         --error "${output_dir}/logs_quantify/%A_%a.log" \
+#         --array "1-${num_batches}%250" \
+#         --time 6:00:00 \
+#         --account smontgom \
+#         --partition batch \
+#         --cpus-per-task "${step_size}" \
+#         --mem 128G \
+#         --constraint="nvme" \
+#         --job-name quantify_bam_batch \
+#         ${code_dir}/quantify_bam_batch.sh \
+#             --reference_dir ${reference_dir} \
+#             --vcf_dir ${vcf_dir} \
+#             --output_dir ${output_dir} \
+#             --code_dir ${code_dir} \
+#             --bam_list_paths ${bam_list_paths} \
+#             --reference_fasta ${reference_fasta} \
+#             --genes_gtf ${genes_gtf} \
+#             --chr_sizes ${chr_sizes} \
+#             --intervals_bed ${intervals_bed} \
+#             --ipa_annotation ${ipa_annotation} \
+#             --editing_bed ${editing_bed} \
+#             --step_size ${step_size}
+# else
+#     echo "must submit on either 'sherlock' or 'scg'"
+# fi

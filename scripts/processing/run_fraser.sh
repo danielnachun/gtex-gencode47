@@ -25,6 +25,7 @@ options_array=(
     duplicate_marked_bam
     sample_id
     output_dir
+    working_dir
     code_dir
 )
 
@@ -42,6 +43,8 @@ while true; do
             sample_id="${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
+        --working_dir )
+            working_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --)
@@ -53,13 +56,15 @@ while true; do
 done
 
 mkdir -p ${output_dir}
+mkdir -p ${working_dir}
 
-echo $(date +"[%b %d %H:%M:%S] Running FRASER2")
+echo $(date +"[%b %d %H:%M:%S] Counting split reads with FRASER2")
 
-Rscript ${code_dir}/fraser_quantification.R \
-    ${duplicate_marked_bam} \
-    ${output_dir} \
-    ${sample_id}.fraser.rds
+${code_dir}/fraser.R \
+    --bam_file ${duplicate_marked_bam} \
+    --sample_id ${sample_id} \
+    --output_directory ${output_dir} \
+    --working_directory ${working_dir}
 
 echo $(date +"[%b %d %H:%M:%S] Done")
 

@@ -12,6 +12,8 @@ samtools = "1.21.*"
 
 [feature.calledsites.dependencies]
 gatk4 = "4.6.*"
+bcftools = "1.15.*"
+
 
 [feature.realignbam.dependencies]
 bamsync = "gtex_v10.*"
@@ -32,6 +34,9 @@ rnaseqc = "2.4.2.*"
 samtools = "1.21.*"
 ipafinder = "1.0.*"
 bioconductor-fraser = "2.2.*"
+r-argparser = "0.7.*"
+r-readr = "2.1.*"
+r-biocmanager = "1.30.*"
 
 [system-requirements]
 linux = "3.10"

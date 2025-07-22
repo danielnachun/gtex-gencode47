@@ -73,13 +73,13 @@ gatk Mutect2 \
     --dont-use-soft-clipped-bases \
     --panel-of-normals "${vcf_file}" \
     --f1r2-tar-gz "${output_dir}/${sample_id}.f1r2.tar.gz" \
-    -A OrientationBiasReadCounts \
-    -A ReadPosRankSumTest \
-    -A MappingQualityRankSumTest \
-    -A RMSMappingQuality \
-    -A QualByDepth \
-    -A FragmentLength
-
+    --enable-all-annotations true \
+    # -A OrientationBiasReadCounts \
+    # -A ReadPosRankSumTest \
+    # -A MappingQualityRankSumTest \
+    # -A RMSMappingQuality \
+    # -A QualByDepth \
+    # -A FragmentLength
 
 echo $(date +"[%b %d %H:%M:%S] Getting pileup summaries.")
 gatk GetPileupSummaries \
@@ -101,18 +101,47 @@ gatk LearnReadOrientationModel \
         --output ${output_dir}/${sample_id}.artifact_prior.tar.gz
 
     
-echo $(date +"[%b %d %H:%M:%S] Filtering somatic variants with FilterMutectCalls.")
-gatk FilterMutectCalls \
-        --variant "${output_dir}/${sample_id}.mutect2.vcf" \
-        --output "${output_dir}/${sample_id}.mutect2.filtered.vcf" \
-        --contamination-table "${output_dir}/${sample_id}.contamination.table" \
-        --ob-priors  "${output_dir}/${sample_id}.artifact_prior.tar.gz" \
-        --reference "${reference_fasta}" \
-        --min-median-base-quality 20 \
-        --max-alt-allele-count 1 \
-        --min-median-read-position 6 \
-        --unique-alt-read-count 3 \
-        --read-filter NotSupplementaryAlignmentReadFilter 
+# echo $(date +"[%b %d %H:%M:%S] Filtering somatic variants with FilterMutectCalls.")
+# gatk FilterMutectCalls \
+#         --variant "${output_dir}/${sample_id}.mutect2.vcf" \
+#         --output "${output_dir}/${sample_id}.mutect2.filtered2.vcf" \
+#         --contamination-table "${output_dir}/${sample_id}.contamination.table" \
+#         --reference "${reference_fasta}" \
+#         --min-median-base-quality 20 \
+#         --max-alt-allele-count 1 \
+#         --min-median-read-position 6 \
+#         --unique-alt-read-count 3 \
+#         --max-events-in-region 100000 \
+#         --read-filter NotSupplementaryAlignmentReadFilter \
+#         --exclude-intervals /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.gencode.vcf.gz \
+#         --exclude-intervals /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/All_20180418.gencode.vcf.gz \
+#         --exclude-intervals /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/ENCFF356LFX.bed \
+#         --exclude-intervals /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/gencode.v47.splice_site.pad4.sorted.bed \
+#         --exclude-intervals /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/gencode.v47.homopolymer_run.bed 
+
+
+# echo $(date +"[%b %d %H:%M:%S] Filtering somatic variants with FilterMutectCalls.")
+# gatk FilterMutectCalls \
+#         --variant "${output_dir}/${sample_id}.mutect2.vcf" \
+#         --output "${output_dir}/${sample_id}.mutect2.filtered.vcf" \
+#         --contamination-table "${output_dir}/${sample_id}.contamination.table" \
+#         --ob-priors  "${output_dir}/${sample_id}.artifact_prior.tar.gz" \
+#         --reference "${reference_fasta}" \
+#         --min-median-base-quality 20 \
+#         --max-alt-allele-count 1 \
+#         --min-median-read-position 6 \
+#         --unique-alt-read-count 3 \
+#         --max-events-in-region 1000 \
+#         --read-filter NotSupplementaryAlignmentReadFilter 
+
+# # filter out the regions
+# bcftools view "${output_dir}/${sample_id}.mutect2.filtered.vcf" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.gencode.vcf.gz" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/All_20180418.gencode.vcf.gz" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/ENCFF356LFX.bed" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/gencode.v47.splice_site.pad4.sorted.bed" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/gencode.v47.homopolymer_run.bed" \
+#     --output "${output_dir}/${sample_id}.mutect2.filtered_regions.vcf"
 
 
 echo $(date +"[%b %d %H:%M:%S] Done")

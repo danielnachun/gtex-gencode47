@@ -75,12 +75,23 @@ gatk HaplotypeCaller \
     --dbsnp ${dbsnp}
 
 
-echo $(date +"[%b %d %H:%M:%S] Filtering HaplotypeCaller")
-bcftools view ${output_dir}/${sample_id}.hc.vcf.gz \
-    --include "INFO/DP>=10 & MQ>=40 & MQRankSum>=-12.5 & QD>=2 & ReadPosRankSum>=-8 & ReadPosRankSum<8 & AD > 3 & MPOS > 6" \
-    --min-alleles 2 \
-    --max-alleles 2 \
-    --output ${output_dir}/${sample_id}.hc_filtered.vcf.gz
+# echo $(date +"[%b %d %H:%M:%S] Filtering HaplotypeCaller")
+# bcftools view ${output_dir}/${sample_id}.hc.vcf.gz \
+#     --include "INFO/DP>=10 & MQ>=40 & MQRankSum>=-12.5 & QD>=2 & ReadPosRankSum>=-8 & ReadPosRankSum<8 & AD > 3 & MPOS > 6" \
+#     --min-alleles 2 \
+#     --max-alleles 2 \
+#     --output ${output_dir}/${sample_id}.hc.filtered.vcf.gz
+
+
+# # filter out the regions
+# bcftools view ${output_dir}/${sample_id}.hc.filtered.vcf.gz \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.gencode.vcf.gz" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/All_20180418.gencode.vcf.gz" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/ENCFF356LFX.bed" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/gencode.v47.splice_site.pad4.sorted.bed" \
+#     --targets-file "^/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/gencode.v47.homopolymer_run.bed" \
+#     --output ${output_dir}/${sample_id}.hc.filtered_regions.vcf.gz
+
 
 echo $(date +"[%b %d %H:%M:%S] Done")
 

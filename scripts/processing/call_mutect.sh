@@ -157,40 +157,40 @@ rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 
 echo $(date +"[%b %d %H:%M:%S] Callind edSites for ${sample_id}")
 
-# run mutect on pre-bqsr
-# Check for VCF files and run mutect with participant vcf if it exists, otherwise full vcf
-vcf_file=${participant_id}.snps.vcf.gz 
-vcf_index=${participant_id}.snps.vcf.gz.tbi
-vcf_path="${vcf_dir}/${vcf_file}"
-vcf_index_path="${vcf_dir}/${vcf_index}"
+# # run mutect on pre-bqsr
+# # Check for VCF files and run mutect with participant vcf if it exists, otherwise full vcf
+# vcf_file=${participant_id}.snps.vcf.gz 
+# vcf_index=${participant_id}.snps.vcf.gz.tbi
+# vcf_path="${vcf_dir}/${vcf_file}"
+# vcf_index_path="${vcf_dir}/${vcf_index}"
 
-if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
-    echo "VCF files found. Running MUTECT2 with PON from participant VCF..."
-    vcf_dir_tmp=${dir_prefix}/vcfs
-    mkdir -p ${vcf_dir_tmp}
-    rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
-    rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
+# if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
+#     echo "VCF files found. Running MUTECT2 with PON from participant VCF..."
+#     vcf_dir_tmp=${dir_prefix}/vcfs
+#     mkdir -p ${vcf_dir_tmp}
+#     rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
+#     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
-    bash ${code_dir}/run_mutect.sh \
-        --bqsr_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-        --sample_id ${sample_id} \
-        --reference_fasta ${local_reference_dir}/${reference_fasta} \
-        --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
-        --vcf_file ${vcf_dir_tmp}/${vcf_file} \
-        --exac_reference ${local_reference_dir}/${exac_reference} \
-        --output_dir ${dir_prefix}/output/mutect_prerecalibration
+#     bash ${code_dir}/run_mutect.sh \
+#         --bqsr_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#         --sample_id ${sample_id} \
+#         --reference_fasta ${local_reference_dir}/${reference_fasta} \
+#         --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
+#         --vcf_file ${vcf_dir_tmp}/${vcf_file} \
+#         --exac_reference ${local_reference_dir}/${exac_reference} \
+#         --output_dir ${dir_prefix}/output/mutect_prerecalibration
 
-else
-    echo "Warning: VCF files not found, running MUTECT with PON from all participant combined VCF ..."
-    bash ${code_dir}/run_mutect.sh \
-        --bqsr_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-        --sample_id ${sample_id} \
-        --reference_fasta ${local_reference_dir}/${reference_fasta} \
-        --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
-        --vcf_file ${local_reference_dir}/${full_vcf_file} \
-        --exac_reference ${local_reference_dir}/${exac_reference} \
-        --output_dir ${dir_prefix}/output/mutect_prerecalibration
-fi
+# else
+#     echo "Warning: VCF files not found, running MUTECT with PON from all participant combined VCF ..."
+#     bash ${code_dir}/run_mutect.sh \
+#         --bqsr_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#         --sample_id ${sample_id} \
+#         --reference_fasta ${local_reference_dir}/${reference_fasta} \
+#         --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
+#         --vcf_file ${local_reference_dir}/${full_vcf_file} \
+#         --exac_reference ${local_reference_dir}/${exac_reference} \
+#         --output_dir ${dir_prefix}/output/mutect_prerecalibration
+# fi
 
 
 # run SplitNCigarReads
@@ -234,6 +234,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
         --reference_fasta ${local_reference_dir}/${reference_fasta} \
         --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
         --vcf_file ${vcf_dir_tmp}/${vcf_file} \
+        --exac_reference ${local_reference_dir}/${exac_reference} \
         --output_dir ${dir_prefix}/output/mutect
 
 else
@@ -248,14 +249,13 @@ else
         --output_dir ${dir_prefix}/output/mutect
 fi
 
-
-# 44 minute run time
-bash ${code_dir}/run_haplotype_caller.sh \
-    --bqsr_bam ${dir_prefix}/output/bqsr/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
-    --sample_id ${sample_id} \
-    --reference_fasta ${local_reference_dir}/${reference_fasta} \
-    --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
-    --dbsnp ${local_reference_dir}/${dbsnp} \
-    --output_dir ${dir_prefix}/output/haplotype_caller
+# # 44 minute run time
+# bash ${code_dir}/run_haplotype_caller.sh \
+#     --bqsr_bam ${dir_prefix}/output/bqsr/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
+#     --sample_id ${sample_id} \
+#     --reference_fasta ${local_reference_dir}/${reference_fasta} \
+#     --gene_intervals_bed ${local_reference_dir}/${gene_intervals_bed} \
+#     --dbsnp ${local_reference_dir}/${dbsnp} \
+#     --output_dir ${dir_prefix}/output/haplotype_caller
 
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}

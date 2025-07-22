@@ -1,52 +1,53 @@
 #!/usr/bin/env bash
-
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/call_mutect_all_tissues.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 mkdir -p ${output_dir}/logs
 
-# get all the v10 bam paths from bam dir
-bam_dir_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.md.bam$')
+# get all the realigned bam paths
+bam_dir_bam_list=$(ls "$realign_bam_dir" | grep 'Aligned.sortedByCoord.out.patched.v11md.bam$')
 # filter to only those in gtex_ids
 full_bam_list=$(grep -F -f "$gtex_ids" <<< "$bam_dir_bam_list")
 original_count=$(echo "$full_bam_list" | wc -l)
 echo "Original sample count: ${original_count}"
 
+
 # if true do all in gtex_ids
-# if false, do all in gtex ids that do not already have a genome_bam in the output folder
+# if false, do all in gtex ids that do not already have a haplotype_caller output 
 regenerate_all=${regenerate_all:-false}
 if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
-    bams_to_realign=$(sed "s|^|${bam_dir}/|" <<< "$full_bam_list")
+    bams_to_call=$(sed "s|^|${realign_bam_dir}/|" <<< "$full_bam_list")
 else
-    # only realign a bam if the v11 genome bam does not already exist
-    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
+    # only quantify a bam if the haplotype_caller output does not already exist
+    bams_to_call=$(grep -v -F -f <(ls "${output_dir}/mutect/" | sed 's|\.mutect2\.vcf$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
 fi
 
-# Check if bams_to_realign is empty
-if [ -z "$bams_to_realign" ]; then
+# Check if bams_to_call is empty
+if [ -z "$bams_to_call" ]; then
     echo "To be processed: 0"
-    echo "All bams realigned"
+    echo "All bams have had sites called"
     exit 0  # Exit the script with a success status
 else
     # If not empty, count the number of lines (bams to realign)
-    to_process_count=$(echo "$bams_to_realign" | wc -l)
+    to_process_count=$(echo "$bams_to_call" | wc -l)
     echo "To be processed: $to_process_count"
 fi
 
 completed_count=$((original_count - to_process_count))
 
+
 # create a folder with a file per step, with one bam path per line in the file
-bam_list_folder="$output_dir/file_lists_realign"
+bam_list_folder="$output_dir/file_lists_edsites"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
-split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
+split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_call}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
-bam_list_paths="${output_dir}/file_list_paths_realign.txt"
+bam_list_paths="${output_dir}/file_list_paths_edsites.txt"
 rm -rf "${bam_list_paths}"
 printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
 num_batches=$(wc -l < "${bam_list_paths}")
@@ -58,31 +59,33 @@ if [ "${num_batches}" -gt "${max_array_size}" ]; then
 fi
 
 echo "Already completed: ${completed_count}"
-echo "To be realigned: ${to_process_count}"
+echo "To be quantified: ${to_process_count}"
 echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
 echo "Batches created: ${num_batches}"
 
-
 sbatch_params=(
-    --output "${output_dir}/logs_realign/%A_%a.log"
-    --error "${output_dir}/logs_realign/%A_%a.log"
+    --output "${output_dir}/logs_mutect/%A_%a.log"
+    --error "${output_dir}/logs_mutect/%A_%a.log"
     --array "1-${num_batches}%250"
-    --time 12:00:00
+    --time 24:00:00
     --cpus-per-task "${step_size}"
     --mem 128G
-    --job-name realign_bam_batch
-    ${code_dir}/realign_bam_batch.sh \
+    --job-name call_mutect
+    ${code_dir}/call_mutect_batch.sh \
         --reference_dir ${reference_dir} \
-        --vcf_dir ${vcf_dir} \
         --output_dir ${output_dir} \
         --code_dir ${code_dir} \
+        --vcf_dir ${vcf_dir} \
         --bam_list_paths ${bam_list_paths} \
         --reference_fasta ${reference_fasta} \
-        --rsem_ref_dir ${rsem_ref_dir} \
-        --star_index ${star_index} \
+        --dbsnp ${dbsnp} \
+        --indels_mills ${indels_mills} \
+        --indels_decoy ${indels_decoy} \
+        --gene_intervals_bed ${gene_intervals_bed} \
+        --full_vcf_file ${full_vcf_file} \
+        --exac_reference ${exac_reference} \
         --step_size ${step_size}
 )
-
 
 # Submit on either sherlock or scg
 if [ "${submit_on}" = 'sherlock' ]; then

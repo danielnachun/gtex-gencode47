@@ -4,15 +4,9 @@ set -o xtrace -o nounset -o errexit
 
 # source the config file
 CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/null_all_tissuses_v11.sh"
-if [[ -f "$CONFIG_FILE" ]]; then
-    source "$CONFIG_FILE"
-else
-    echo "Error: Config file $CONFIG_FILE not found!"
-    exit 1
-fi
+[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 
-mkdir -p ${output_dir}
 mkdir -p ${output_dir}/logs
 
 
