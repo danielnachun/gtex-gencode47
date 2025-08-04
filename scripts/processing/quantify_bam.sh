@@ -203,7 +203,6 @@ rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 #     --output_dir ${dir_prefix}/output/leafcutter
 
 
-
 # run fraser quantification
 bash ${code_dir}/run_fraser.sh \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
@@ -229,7 +228,6 @@ bash ${code_dir}/run_edsite_pileup.sh \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --editing_bed ${local_reference_dir}/${editing_bed} \
     --output_dir ${dir_prefix}/output/rnaediting
-
 
 # copy out results
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}

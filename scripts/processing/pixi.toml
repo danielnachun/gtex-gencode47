@@ -10,10 +10,19 @@ version = "0.1.0"
 bcftools = "1.15.*"
 samtools = "1.21.*"
 
-[feature.calledsites.dependencies]
+[feature.runmutect.dependencies]
 gatk4 = "4.6.*"
 bcftools = "1.15.*"
 
+[feature.runphaser.dependencies]
+gtex-pipeline-qtl = "gtex_v10.*"
+gtex-pipeline-rnaseq = "gtex_v10.*"
+
+[feature.calledsites.dependencies]
+python = "2.7.*"
+sprint = "0.1.8.*"
+bwa = "0.7.12.*"
+samtools = "1.2.*"
 
 [feature.realignbam.dependencies]
 bamsync = "gtex_v10.*"
@@ -37,6 +46,8 @@ bioconductor-fraser = "2.2.*"
 r-argparser = "0.7.*"
 r-readr = "2.1.*"
 r-biocmanager = "1.30.*"
+reditools3 = "3.4.*"
+
 
 [system-requirements]
 linux = "3.10"
@@ -46,4 +57,6 @@ libc = "2.17"
 realignbam = ["realignbam"]
 quantifybam = ["quantifybam"]
 extractvcf = ["extractvcf"]
+runmutect = ["runmutect"]
+runphaser = ["runphaser"]
 calledsites = ["calledsites"]

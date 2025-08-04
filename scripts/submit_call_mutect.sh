@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -o xtrace -o nounset -o errexit
+set -o nounset -o errexit
 
 # source the config file
 CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/call_mutect_all_tissues.sh"
@@ -41,13 +41,13 @@ completed_count=$((original_count - to_process_count))
 
 
 # create a folder with a file per step, with one bam path per line in the file
-bam_list_folder="$output_dir/file_lists_edsites"
+bam_list_folder="$output_dir/file_lists_mutect"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
 split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_call}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
-bam_list_paths="${output_dir}/file_list_paths_edsites.txt"
+bam_list_paths="${output_dir}/file_list_paths_mutect.txt"
 rm -rf "${bam_list_paths}"
 printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
 num_batches=$(wc -l < "${bam_list_paths}")

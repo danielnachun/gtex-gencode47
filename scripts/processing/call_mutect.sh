@@ -51,7 +51,7 @@ options_array=(
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 
 # Parse command line arguments with getopt
-arguments=$(getopt --options a --longoptions "${longoptions}" --name 'call_edsites' -- "$@")
+arguments=$(getopt --options a --longoptions "${longoptions}" --name 'run_mutect' -- "$@")
 eval set -- "${arguments}"
 
 while true; do
@@ -99,13 +99,13 @@ activate_pixi_env() {
     
     # Try to activate the environment using shell-hook
     # TODO make pixi
-    if eval "$(pixi shell-hook --environment calledsites --manifest-path ${code_dir}/pixi.toml)"; then
+    if eval "$(pixi shell-hook --environment runmutect --manifest-path ${code_dir}/pixi.toml)"; then
         # Check if environment was properly activated 
         if command -v gatk >/dev/null 2>&1; then
             echo "Successfully activated pixi environment"
             return 0
         else
-            echo "Environment activated, but rnaseqc not available"
+            echo "Environment activated, but gatk not available"
             return 1
         fi
     else
@@ -155,7 +155,7 @@ mkdir -p ${dir_prefix}/tmp
 rsync -PrhLtv ${bam_file} ${dir_prefix}/references/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 
-echo $(date +"[%b %d %H:%M:%S] Callind edSites for ${sample_id}")
+echo $(date +"[%b %d %H:%M:%S] ran mutect for ${sample_id}")
 
 # # run mutect on pre-bqsr
 # # Check for VCF files and run mutect with participant vcf if it exists, otherwise full vcf

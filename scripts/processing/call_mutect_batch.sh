@@ -41,7 +41,7 @@ options_array=(
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 
 # Parse command line arguments with getopt
-arguments=$(getopt --options a --longoptions "${longoptions}" --name 'call_edsites_batch' -- "$@")
+arguments=$(getopt --options a --longoptions "${longoptions}" --name 'call_mutect_batch' -- "$@")
 eval set -- "${arguments}"
 
 while true; do
