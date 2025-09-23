@@ -12,3 +12,6 @@ trash/*
 output/*
 
 gencode_caudate_collaberation/*
+
+scripts/upload/*
+scripts/analysis/*

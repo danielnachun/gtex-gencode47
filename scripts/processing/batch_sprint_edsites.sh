@@ -23,19 +23,13 @@ check_for_directory() {
 
 options_array=(
     reference_dir
-    vcf_dir
     output_dir
     code_dir
     bam_list_paths
     reference_fasta
-    chr_sizes
-    genes_gtf
-    intervals_bed
-    ipa_annotation
-    editing_bed
+    repeat_bed
     step_size
 )
-
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 
@@ -47,8 +41,6 @@ while true; do
     case "${1}" in
         --reference_dir )
             reference_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --vcf_dir )
-            vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --code_dir )
@@ -57,16 +49,8 @@ while true; do
             bam_list_paths="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
-        --chr_sizes )
-            chr_sizes="${2}"; shift 2 ;;
-        --genes_gtf )
-            genes_gtf="${2}"; shift 2 ;;
-        --intervals_bed )
-            intervals_bed="${2}"; shift 2 ;;
-        --ipa_annotation )
-            ipa_annotation="${2}"; shift 2 ;;
-        --editing_bed )
-            editing_bed="${2}"; shift 2 ;;
+        --repeat_bed )
+            repeat_bed="${2}"; shift 2 ;;
         --step_size )
             step_size="${2}"; shift 2 ;;
         --)
@@ -87,23 +71,14 @@ reference_dir_prefix="${TMPDIR}/references_${line_number}"
 mkdir -p "${reference_dir_prefix}"
 rsync -PrhLtv "${reference_dir}"/* "${reference_dir_prefix}/"
 
-# I'm getting errors requesting too many jobs?
-echo "Step size: ${step_size}"
-echo "Requested CPUs: ${SLURM_CPUS_PER_TASK}"
-
 # run the batch
 cat "${bam_list}" | parallel -j"${step_size}" --ungroup --verbose \
-        "${code_dir}/quantify_bam.sh" \
+        "${code_dir}/sprint_edsites.sh" \
         --local_reference_dir "${reference_dir_prefix}/" \
-        --vcf_dir "${vcf_dir}" \
         --output_dir "${output_dir}" \
         --code_dir "${code_dir}" \
         --bam_file {} \
         --reference_fasta "${reference_fasta}" \
-        --chr_sizes "${chr_sizes}" \
-        --genes_gtf "${genes_gtf}" \
-        --intervals_bed "${intervals_bed}" \
-        --ipa_annotation "${ipa_annotation}" \
-        --editing_bed "${editing_bed}" \        
+        --repeat_bed "${repeat_bed}"    
 
 echo "Batch finished"

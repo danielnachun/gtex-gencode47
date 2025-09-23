@@ -44,13 +44,13 @@ completed_count=$((original_count - to_process_count))
 
 
 # create a folder with a file per step, with one bam path per line in the file
-bam_list_folder="$output_dir/rnaseqc_sherlock_bam_file_lists"
+bam_list_folder="$output_dir/file_lists/rnaseqc_sherlock_bam_file_lists"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
 split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_quantify}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
-bam_list_paths="${output_dir}/rnaseqc_sherlock_bam_list_paths.txt"
+bam_list_paths="${output_dir}/file_lists/rnaseqc_sherlock_bam_list_paths.txt"
 rm -rf "${bam_list_paths}"
 printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
 num_batches=$(wc -l < "${bam_list_paths}")
@@ -69,8 +69,8 @@ echo "Batches created: ${num_batches}"
 echo "Batches running: ${num_batches}"
 
 
-sbatch --output "${output_dir}/logs/%A_%a.log" \
-    --error "${output_dir}/logs/%A_%a.log" \
+sbatch --output "${output_dir}/logs/rnaseqc_null/%A_%a.log" \
+    --error "${output_dir}/logs/rnaseqc_null/%A_%a.log" \
     --array "1-${to_process_count}%250" \
     --array="1-${num_batches}%250" \
     --time 6:00:00 \
@@ -78,7 +78,7 @@ sbatch --output "${output_dir}/logs/%A_%a.log" \
     --partition normal,owners \
     --mem 64G \
     --job-name rnaseq_null_batch \
-    ${code_dir}/quantify_rnaseqc_null_batch.sh \
+    ${code_dir}/batch_quantify_rnaseqc_null.sh \
         --reference_dir ${reference_dir} \
         --output_dir ${output_dir} \
         --code_dir ${code_dir} \

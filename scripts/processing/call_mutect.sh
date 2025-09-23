@@ -258,4 +258,12 @@ fi
 #     --dbsnp ${local_reference_dir}/${dbsnp} \
 #     --output_dir ${dir_prefix}/output/haplotype_caller
 
+# # copy out results
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
+# Create completion marker file to indicate successful processing
+completion_dir="${output_dir}/completed/mutect"
+mkdir -p "${completion_dir}"
+completion_file="${completion_dir}/${sample_id}.completed"
+echo "Processing completed successfully for sample: ${sample_id}" > "${completion_file}"
+echo "Completion marker created: ${completion_file}"

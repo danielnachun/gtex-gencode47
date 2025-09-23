@@ -22,31 +22,25 @@ check_for_directory() {
 }
 
 options_array=(
-    duplicate_marked_bam
-    genes_gtf
-    genome_fasta
+    bam_file
     sample_id
-    output_dir
+    tmp_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 
 # Parse command line arguments with getopt
-arguments=$(getopt --options a --longoptions "${longoptions}" --name 'fastq_to_star' -- "$@")
+arguments=$(getopt --options a --longoptions "${longoptions}" --name 'unaligned_from_bam' -- "$@")
 eval set -- "${arguments}"
 
 while true; do
     case "${1}" in
-        --duplicate_marked_bam )
-            duplicate_marked_bam="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --genes_gtf )
-            genes_gtf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
-        --genome_fasta )
-            genome_fasta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --bam_file )
+            bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --sample_id )
             sample_id="${2}"; shift 2 ;;
-        --output_dir )
-            output_dir="${2}"; shift 2 ;;
+        --tmp_dir )
+            tmp_dir="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -55,16 +49,15 @@ while true; do
     esac
 done
 
-mkdir -p ${output_dir}
-echo $(date +"[%b %d %H:%M:%S] Generating QC for ${sample_id}")
-# run RNA-SeQC
-rnaseqc \
-    ${genes_gtf} \
-    ${duplicate_marked_bam} \
-    ${output_dir} \
-    -s ${sample_id} \
-    --fasta ${genome_fasta} \
-    -vv
+mkdir -p ${tmp_dir}
 
-gzip ${output_dir}/*.gct
+echo $(date +"[%b %d %H:%M:%S] Extracting unaligned reads from BAM")
+
+# get upmapped reads from bam file
+samtools view -f4 -b ${bam_file} -o ${tmp_dir}/${sample_id}.unaligned.bam
+
 echo $(date +"[%b %d %H:%M:%S] Done")
+
+
+
+

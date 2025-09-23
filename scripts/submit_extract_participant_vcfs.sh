@@ -62,8 +62,8 @@ echo "To be processed: ${to_process_count}"
 # submit on either sherlock or scg
 if [ "${submit_on}" = 'sherlock' ]; then
     # submit on sherlock
-    sbatch --output "${output_dir}/logs/%A_%a.log" \
-        --error "${output_dir}/logs/%A_%a.log" \
+    sbatch --output "${output_dir}/logs/extract_participant_vcfs/%A_%a.log" \
+        --error "${output_dir}/logs/extract_participant_vcfs/%A_%a.log" \
         --array "1-${to_process_count}%250" \
         --time 4:00:00 \
         --partition normal,owners \

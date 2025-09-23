@@ -23,6 +23,7 @@ python = "2.7.*"
 sprint = "0.1.8.*"
 bwa = "0.7.12.*"
 samtools = "1.2.*"
+fastp="1.0.*"
 
 [feature.realignbam.dependencies]
 bamsync = "gtex_v10.*"

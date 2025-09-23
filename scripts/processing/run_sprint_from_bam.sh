@@ -26,6 +26,7 @@ options_array=(
     repeat_bed
     reference_fasta
     output_dir
+    code_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -44,6 +45,8 @@ while true; do
             reference_fasta="${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
+        --code_dir )
+            code_dir="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -59,15 +62,18 @@ echo $(date +"[%b %d %H:%M:%S] Running SPRINT from aligned BAM")
 
 # run sprint on aligned bam to get regular editing
 # the expected argument order does not match the manual
-python /home/klawren/oak/gtex/scripts/processing/.pixi/envs/calledsites/lib/python2.7/site-packages/sprint/sprint_from_bam.py \
+# python /home/klawren/oak/gtex/scripts/processing/.pixi/envs/calledsites/lib/python2.7/site-packages/sprint/sprint_from_bam.py \
+
+python ${code_dir}/sprint_from_bam.py \
     -rp ${repeat_bed} \
+    ${duplicate_marked_bam} \
     ${reference_fasta} \
     ${output_dir} \
-    ${duplicate_marked_bam} \
     ${samtools_path}
 
 echo $(date +"[%b %d %H:%M:%S] Done")
 
+# code_dir='/home/klawren/oak/gtex/scripts/processing'
 # output_dir='output/test_bams/output_kate/sprint/GTEX-1C4CL-2126-SM-7IGQC/aligned'
 # duplicate_marked_bam='output/test_bams/output_kate/genome_bam/GTEX-1C4CL-2126-SM-7IGQC.Aligned.sortedByCoord.out.patched.v11md.bam'
 # repeat_bed="data/edsite_references/hg38_repeat.bed"

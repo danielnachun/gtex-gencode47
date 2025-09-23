@@ -3,13 +3,12 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_all_tissues.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_truncated.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
-mkdir -p ${output_dir}/logs
 
 # get all the v10 bam paths from bam dir
-bam_dir_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.md.bam$')
+bam_dir_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.v11md.bam$')
 # filter to only those in gtex_ids
 full_bam_list=$(grep -F -f "$gtex_ids" <<< "$bam_dir_bam_list")
 original_count=$(echo "$full_bam_list" | wc -l)
@@ -23,7 +22,7 @@ if [ "${regenerate_all}" = true ]; then
     bams_to_realign=$(sed "s|^|${bam_dir}/|" <<< "$full_bam_list")
 else
     # only realign a bam if the v11 genome bam does not already exist
-    bams_to_realign=$(grep -v -F -f <(ls "${output_dir}/genome_bam/" | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
+    bams_to_realign=$(grep -v -F -f <(find "${output_dir}/genome_bam/" -name "*.v11md.bam" -exec basename {} \; | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 fi
 
 # Check if bams_to_realign is empty
@@ -40,13 +39,13 @@ fi
 completed_count=$((original_count - to_process_count))
 
 # create a folder with a file per step, with one bam path per line in the file
-bam_list_folder="$output_dir/file_lists_realign"
+bam_list_folder="$output_dir/file_lists/file_lists_realign"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
 split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
-bam_list_paths="${output_dir}/file_list_paths_realign.txt"
+bam_list_paths="${output_dir}/file_lists/file_list_paths_realign.txt"
 rm -rf "${bam_list_paths}"
 printf "%s\n" "${bam_list_folder}"/* > "${bam_list_paths}"
 num_batches=$(wc -l < "${bam_list_paths}")
@@ -64,14 +63,14 @@ echo "Batches created: ${num_batches}"
 
 
 sbatch_params=(
-    --output "${output_dir}/logs_realign/%A_%a.log"
-    --error "${output_dir}/logs_realign/%A_%a.log"
+    --output "${output_dir}/logs/realign/%A_%a.log"
+    --error "${output_dir}/logs/realign/%A_%a.log"
     --array "1-${num_batches}%250"
     --time 12:00:00
     --cpus-per-task "${step_size}"
     --mem 128G
     --job-name realign_bam_batch
-    ${code_dir}/realign_bam_batch.sh \
+    ${code_dir}/batch_realign_bam.sh \
         --reference_dir ${reference_dir} \
         --vcf_dir ${vcf_dir} \
         --output_dir ${output_dir} \

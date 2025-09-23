@@ -138,7 +138,7 @@ rsync -PrhLtv ${bam_file} ${dir_prefix}/output/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/output/genome_bam
 
 # run rnaseq qc
-bash ${code_dir}/run_rnaseq_qc.sh \
+bash ${code_dir}/run_rnaseqc.sh \
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.${bam_file_end} \
     --genes_gtf ${local_reference_dir}/${genes_gtf} \
     --genome_fasta ${local_reference_dir}/${reference_fasta} \

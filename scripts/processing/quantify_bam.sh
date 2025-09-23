@@ -153,55 +153,66 @@ mkdir -p ${dir_prefix}/tmp
 rsync -PrhLtv ${bam_file} ${dir_prefix}/references/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 
-# # run rnaseq qc
-# bash ${code_dir}/run_rnaseq_qc.sh \
-#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     --genes_gtf ${local_reference_dir}/${genes_gtf} \
-#     --genome_fasta ${local_reference_dir}/${reference_fasta} \
-#     --intervals_bed ${local_reference_dir}/${intervals_bed} \
-#     --sample_id ${sample_id} \
-#     --output_dir ${dir_prefix}/output/rnaseq_qc
+# run rnaseq qc
+bash ${code_dir}/run_rnaseqc.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --genes_gtf ${local_reference_dir}/${genes_gtf} \
+    --genome_fasta ${local_reference_dir}/${reference_fasta} \
+    --intervals_bed ${local_reference_dir}/${intervals_bed} \
+    --sample_id ${sample_id} \
+    --output_dir ${dir_prefix}/output/rnaseqc
 
-# # run coverage
-# bash ${code_dir}/run_bam_to_coverage.sh \
-#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     --chr_sizes ${local_reference_dir}/${chr_sizes} \
-#     --sample_id ${sample_id} \
-#     --output_dir ${dir_prefix}/output/coverage
+# copy out results
+rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
+# run coverage
+bash ${code_dir}/run_bam_to_coverage.sh \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --chr_sizes ${local_reference_dir}/${chr_sizes} \
+    --sample_id ${sample_id} \
+    --output_dir ${dir_prefix}/output/coverage
+
+# copy out results
+rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 
-# # Check for VCF files and run GATK only if they exist
-# vcf_file=${participant_id}.snps.vcf.gz 
-# vcf_index=${participant_id}.snps.vcf.gz.tbi
-# vcf_path="${vcf_dir}/${vcf_file}"
-# vcf_index_path="${vcf_dir}/${vcf_index}"
+# Check for VCF files and run GATK only if they exist
+vcf_file=${participant_id}.snps.vcf.gz 
+vcf_index=${participant_id}.snps.vcf.gz.tbi
+vcf_path="${vcf_dir}/${vcf_file}"
+vcf_index_path="${vcf_dir}/${vcf_index}"
 
-# if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
-#     echo "VCF files found. Running GATK step..."
-#     vcf_dir_tmp=${dir_prefix}/vcfs
-#     mkdir -p ${vcf_dir_tmp}
-#     rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
-#     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
+if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF index"; then
+    echo "VCF files found. Running GATK step..."
+    vcf_dir_tmp=${dir_prefix}/vcfs
+    mkdir -p ${vcf_dir_tmp}
+    rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
+    rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
-#     # run gatk
-#     bash ${code_dir}/run_gatk.sh \
-#         --sample_id ${sample_id} \
-#         --dir_prefix ${dir_prefix} \
-#         --genome_fasta ${local_reference_dir}/${reference_fasta} \
-#         --vcf_dir ${vcf_dir} \
-#         --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-#         --output_dir ${dir_prefix}/output/gatk
-# else
-#     echo "Warning: Skipping GATK step because the required VCF files are missing."
-# fi
+    # run gatk ase
+    bash ${code_dir}/run_gatk_ase.sh \
+        --sample_id ${sample_id} \
+        --dir_prefix ${dir_prefix} \
+        --genome_fasta ${local_reference_dir}/${reference_fasta} \
+        --vcf_dir ${vcf_dir} \
+        --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+        --output_dir ${dir_prefix}/output/ase
+else
+    echo "Warning: Skipping GATK step because the required VCF files are missing."
+fi
 
-# # run regtools
-# bash ${code_dir}/run_regtools.sh \
-#     --sample_id ${sample_id} \
-#     --dir_prefix ${dir_prefix} \
-#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     --output_dir ${dir_prefix}/output/leafcutter
+# copy out results
+rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
+# run regtools
+bash ${code_dir}/run_regtools.sh \
+    --sample_id ${sample_id} \
+    --dir_prefix ${dir_prefix} \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --output_dir ${dir_prefix}/output/leafcutter
+
+# copy out results
+rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run fraser quantification
 bash ${code_dir}/run_fraser.sh \
@@ -221,13 +232,23 @@ bash ${code_dir}/run_ipafinder.sh \
     --ipa_annotation ${local_reference_dir}/${ipa_annotation} \
     --output_dir ${dir_prefix}/output/ipafinder
 
-# run edsite quantification
-bash ${code_dir}/run_edsite_pileup.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-    --sample_id ${sample_id} \
-    --reference_fasta ${local_reference_dir}/${reference_fasta} \
-    --editing_bed ${local_reference_dir}/${editing_bed} \
-    --output_dir ${dir_prefix}/output/rnaediting
-
 # copy out results
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
+# # run edsite quantification
+# bash ${code_dir}/run_edsite_pileup.sh \
+#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#     --sample_id ${sample_id} \
+#     --reference_fasta ${local_reference_dir}/${reference_fasta} \
+#     --editing_bed ${local_reference_dir}/${editing_bed} \
+#     --output_dir ${dir_prefix}/output/rnaediting
+
+# # copy out results
+rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+
+# Create completion marker file to indicate successful processing
+completion_dir="${output_dir}/completed/quantifications"
+mkdir -p "${completion_dir}"
+completion_file="${completion_dir}/${sample_id}.completed"
+echo "Processing completed successfully for sample: ${sample_id}" > "${completion_file}"
+echo "Completion marker created: ${completion_file}"

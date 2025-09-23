@@ -39,7 +39,6 @@ options_array=(
     code_dir
     bam_file
     reference_fasta
-    rsem_ref_dir
     star_index
 )
 
@@ -63,8 +62,6 @@ while true; do
             bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
-        --rsem_ref_dir )
-            rsem_ref_dir="${2}"; shift 2 ;;
         --star_index )
             star_index="${2}"; shift 2 ;;
         --)
@@ -76,62 +73,10 @@ while true; do
 done
 
 # activate the pixi enviroment
-#source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
-
-# Define variables
-max_attempts=5
-attempt=1
-wait_time=30  # seconds to wait between attempts
-
-# Function to attempt pixi environment activation
-activate_pixi_env() {
-    echo "Attempt $attempt of $max_attempts: Activating pixi environment..."
-    
-    # Try to activate the environment using shell-hook
-    if eval "$(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)"; then
-        # Check if environment was properly activated
-        if command -v picard >/dev/null 2>&1; then
-            echo "Successfully activated pixi environment"
-            return 0
-        else
-            echo "Environment activated, but picard not available"
-            return 1
-        fi
-    else
-        echo "Failed to activate pixi environment"
-        return 1
-    fi
-}
-
-# Main loop to try activation with retries
-while [ $attempt -le $max_attempts ]; do
-    if activate_pixi_env; then
-        # Success - break out of the loop
-        break
-    else
-        # Failed attempt
-        if [ $attempt -eq $max_attempts ]; then
-            echo "ERROR: Failed to activate pixi environment after $max_attempts attempts."
-            echo "Please check your pixi installation and environment configuration."
-            exit 1
-        fi
-        
-        # Increment attempt counter and wait before retry (can't use sleep due to sherlock requirements)
-        echo "Waiting $wait_time seconds before retry..."
-        end_time=$(($(date +%s) + $wait_time))
-        while [ $(date +%s) -lt $end_time ]; do
-            # Perform trivial computation 
-            for i in {1..1000}; do echo $i > /dev/null; done
-        done
-        attempt=$((attempt+1))
-    fi
-done
-
-echo "Pixi environment activated successfully after $attempt attempt(s)."
+source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
 
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
-
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
@@ -163,47 +108,29 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
     # align with star
-    bash ${code_dir}/run_fastq_to_star.sh \
+    bash ${code_dir}/run_star.sh \
         --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
         --sample_id ${sample_id} \
         --vcf_file ${vcf_dir_tmp}/${vcf_file} \
-        --tmp_dir ${dir_prefix}/tmp/star
+        --tmp_dir ${dir_prefix}/output/sj
 else
     echo "Warning: VCF files not found, running STAR without WASP..."
     # align with star
-    bash ${code_dir}/run_fastq_to_star_no_vcf.sh \
+    bash ${code_dir}/run_star_no_vcf.sh \
         --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
         --sample_id ${sample_id} \
-        --tmp_dir ${dir_prefix}/tmp/star
+        --tmp_dir ${dir_prefix}/output/sj
 fi
 
-# sync bams
-bash ${code_dir}/run_bam_sync.sh \
-    --initial_bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.md.bam \
-    --star_aligned_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.sortedByCoord.out.bam \
-    --sample_id ${sample_id} \
-    --tmp_dir ${dir_prefix}/tmp/bamsync \
-    --output_dir ${dir_prefix}/output/flagstat
+ls ${dir_prefix}/output/sj
 
-# mark duplicates, get the genome bam that we save
-bash ${code_dir}/run_mark_duplicates.sh \
-    --genome_bam_file ${dir_prefix}/tmp/bamsync/${sample_id}.Aligned.sortedByCoord.out.patched.bam \
-    --output_prefix ${sample_id}.Aligned.sortedByCoord.out.patched.v11md \
-    --output_dir ${dir_prefix}/output/genome_bam
-
-# run rsem, save isoform quantification
-bash ${code_dir}/run_rsem.sh \
-    --rsem_ref_dir ${local_reference_dir}/${rsem_ref_dir} \
-    --transcriptome_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.toTranscriptome.out.bam \
-    --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/output/rsem
-
+# copy out just the .SJ file
 echo "Copying out results"
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
+rsync -Prhltv ${dir_prefix}/output/sj/*SJ.out.tab* ${output_dir}
 
 echo "Done"
 

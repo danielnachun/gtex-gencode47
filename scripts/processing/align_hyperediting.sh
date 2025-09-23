@@ -38,7 +38,8 @@ options_array=(
     code_dir
     bam_file
     reference_fasta
-    repeat_bed
+    masked_genome_dir
+    splicesites
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -59,8 +60,10 @@ while true; do
             bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
-        --repeat_bed )
-            repeat_bed="${2}"; shift 2 ;;
+        --masked_genome_dir )
+            masked_genome_dir="${2}"; shift 2 ;;
+        --splicesites )
+            splicesites="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -89,7 +92,7 @@ source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pi
 # running on just unliagned reads as a smaller test case for unstranded version 
 
 # get unaligned reads from bam
-bash ${code_dir}/run_sprint_get_unaligned_bam.sh \
+bash ${code_dir}/run_get_unaligned_bam.sh \
     --bam_file ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --tmp_dir ${dir_prefix}/tmp/unaligned_bam
@@ -99,67 +102,71 @@ bash ${code_dir}/run_bam_to_fastq.sh \
     --bam_file ${dir_prefix}/tmp/unaligned_bam/${sample_id}.unaligned.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
+    --tmp_dir ${dir_prefix}/tmp/unaligned_fastq
+
+# do we get different resutls if we run on all reads (i.e. not just unaligned reads)?
+# process all bam reads to fastqs
+bash ${code_dir}/run_bam_to_fastq.sh \
+    --bam_file ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --sample_id ${sample_id} \
+    --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq
 
-# # process all bam reads to fastqs
-# bash ${code_dir}/run_bam_to_fastq.sh \
-#     --bam_file ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     --sample_id ${sample_id} \
-#     --reference_fasta ${local_reference_dir}/${reference_fasta} \
-#     --tmp_dir ${dir_prefix}/tmp/fastq
-
-# activate the pixi enviroment for sprint
+# activate the pixi enviroment for hyperediting
 source <(pixi shell-hook --environment calledsites --manifest-path ${code_dir}/pixi.toml)
 
-# run fastp on fastqs 
-bash ${code_dir}/run_fastp_sprint.sh \
-    --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
-    --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
-    --sample_id ${sample_id} \
-    --tmp_dir ${dir_prefix}/tmp/fastq
+# TODO do we get different resutls if we run fastp first?
+# # run fastp on fastqs 
+# bash ${code_dir}/run_fastp_sprint.sh \
+#     --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
+#     --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
+#     --sample_id ${sample_id} \
+#     --tmp_dir ${dir_prefix}/tmp/fastq
 
-# run sprint on fastqs (all, aligned and unaligned) to get hyperediting
-bash ${code_dir}/run_sprint_from_fastq.sh \
-    --clean_fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}.clean_1.fastq \
-    --clean_fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}.clean_2.fastq \
-    --sample_id ${sample_id} \
-    --repeat_bed ${local_reference_dir}/${repeat_bed} \
-    --reference_fasta ${local_reference_dir}/${reference_fasta} \
-    --output_dir ${dir_prefix}/output/sprint/${sample_id}/ss_2 \
-    --code_dir ${code_dir} \
-    --ss 2 \
-    --get_hyperedited_reads true
+# Run ADAR-bismark 
+/home/klawren/oak/bioinformatics-tools/adar_bismark/Bismark/bismark --adar --hisat2 --non_directional --local \
+  ${local_reference_dir}/${masked_genome_dir} \
+  -1 ${dir_prefix}/tmp/unaligned_fastq/${sample_id}_1.fastq.gz \
+  -2 ${dir_prefix}/tmp/unaligned_fastq/${sample_id}_2.fastq.gz \
+  -o ${output_dir}/hyperediting/unaligned_adar_masked/ \
+  --known-splicesite-infile ${local_reference_dir}/${splicesites} \
+  -B ${sample_id}
+
+# Run GA-bismark
+/home/klawren/oak/bioinformatics-tools/adar_bismark/Bismark/bismark --custom_ref G --custom_alt A --hisat2 --non_directional --local \
+  ${local_reference_dir}/${masked_genome_dir} \
+  -1 ${dir_prefix}/tmp/unaligned_fastq/${sample_id}_1.fastq.gz \
+  -2 ${dir_prefix}/tmp/unaligned_fastq/${sample_id}_2.fastq.gz \
+  -o ${output_dir}/hyperediting/unaligned_GA_masked/ \
+  --known-splicesite-infile ${local_reference_dir}/${splicesites} \
+  -B ${sample_id}
+
+
+
+
+# Run ADAR-bismark 
+/home/klawren/oak/bioinformatics-tools/adar_bismark/Bismark/bismark --adar --hisat2 --non_directional --local \
+  ${local_reference_dir}/${masked_genome_dir} \
+  -1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
+  -2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
+  -o ${output_dir}/hyperediting/adar_masked/ \
+  --known-splicesite-infile ${local_reference_dir}/${splicesites} \
+  -B ${sample_id}
+
+# Run GA-bismark
+/home/klawren/oak/bioinformatics-tools/adar_bismark/Bismark/bismark --custom_ref G --custom_alt A --hisat2 --non_directional --local \
+  ${local_reference_dir}/${masked_genome_dir} \
+  -1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
+  -2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
+  -o ${output_dir}/hyperediting/GA_masked/ \
+  --known-splicesite-infile ${local_reference_dir}/${splicesites} \
+  -B ${sample_id}
 
 echo "Copying out results"
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 
-# run sprint on fastqs (all, aligned and unaligned) to get hyperediting
-bash ${code_dir}/run_sprint_from_fastq.sh \
-    --clean_fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}.clean_1.fastq \
-    --clean_fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}.clean_2.fastq \
-    --sample_id ${sample_id} \
-    --repeat_bed ${local_reference_dir}/${repeat_bed} \
-    --reference_fasta ${local_reference_dir}/${reference_fasta} \
-    --output_dir ${dir_prefix}/output/sprint/${sample_id}/ss_0 \
-    --code_dir ${code_dir} \
-    --ss 0 \
-    --get_hyperedited_reads true
 
-echo "Copying out results"
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
-
-# run sprint on fastqs (all, aligned and unaligned) to get hyperediting
-bash ${code_dir}/run_sprint_from_fastq.sh \
-    --clean_fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}.clean_1.fastq \
-    --clean_fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}.clean_2.fastq \
-    --sample_id ${sample_id} \
-    --repeat_bed ${local_reference_dir}/${repeat_bed} \
-    --reference_fasta ${local_reference_dir}/${reference_fasta} \
-    --output_dir ${dir_prefix}/output/sprint/${sample_id}/ss_1 \
-    --code_dir ${code_dir} \
-    --ss 1 \
-    --get_hyperedited_reads true
 
 echo "Copying out results"
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
