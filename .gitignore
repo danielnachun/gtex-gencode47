@@ -15,4 +15,6 @@ gencode_caudate_collaberation/*
 
 scripts/upload/*
 scripts/analysis/*
-pecotmr/*
+pecotmr
+
+.vscode/*
