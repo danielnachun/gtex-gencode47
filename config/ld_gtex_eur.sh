@@ -1,0 +1,9 @@
+genotype_prefix="/home/klawren/oak/gtex/data/pecotmr_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.MAF01"
+sample_ids="/home/klawren/oak/gtex/data/other_references/v10/european_subject_ids.txt"
+ld_blocks_bed="/home/klawren/oak/gtex/data/pecotmr_references/pyrho_EUR_LD_blocks.bed"
+padding=20000
+out_dir="/home/klawren/oak/gtex/data/pecotmr_references/ld_blocks_gtex_eur"
+code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
+regenerate_all=false
+max_array_size=999
+submit_on=scg

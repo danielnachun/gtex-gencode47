@@ -1,0 +1,13 @@
+ld_region_list="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr_references/pyrho_EUR_LD_blocks.bed"
+tissue_id="Brain_Caudate_basal_ganglia"
+genotype_stem="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.MAF01"
+covariate_dir_path="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/qtl/GTEx_Analysis_v11_eQTL_covariates"
+expression_dir_path="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/qtl/GTEx_Analysis_v11_eQTL_expression_matrices"
+all_v39_genes_path="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr_references/v39_genes.txt"
+region_padding=1000000
+association_padding=20000
+output_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/coloc"
+code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
+regenerate_all=false
+max_array_size=1000
+submit_on=sherlock

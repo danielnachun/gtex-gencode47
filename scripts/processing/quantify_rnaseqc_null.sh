@@ -71,57 +71,7 @@ while true; do
 done
 
 # activate the pixi enviroment
-#source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)
-# Define variables
-max_attempts=5
-attempt=1
-wait_time=30  # seconds to wait between attempts
-
-# Function to attempt pixi environment activation
-activate_pixi_env() {
-    echo "Attempt $attempt of $max_attempts: Activating pixi environment..."
-    
-    # Try to activate the environment using shell-hook
-    if eval "$(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)"; then
-        # Check if environment was properly activated 
-        if command -v rnaseqc >/dev/null 2>&1; then
-            echo "Successfully activated pixi environment"
-            return 0
-        else
-            echo "Environment activated, but rnaseqc not available"
-            return 1
-        fi
-    else
-        echo "Failed to activate pixi environment"
-        return 1
-    fi
-}
-
-# Main loop to try activation with retries
-while [ $attempt -le $max_attempts ]; do
-    if activate_pixi_env; then
-        # Success - break out of the loop
-        break
-    else
-        # Failed attempt
-        if [ $attempt -eq $max_attempts ]; then
-            echo "ERROR: Failed to activate pixi environment after $max_attempts attempts."
-            echo "Please check your pixi installation and environment configuration."
-            exit 1
-        fi
-        
-        # Increment attempt counter and wait before retry (can't use sleep due to sherlock requirements)
-        echo "Waiting $wait_time seconds before retry..."
-        end_time=$(($(date +%s) + $wait_time))
-        while [ $(date +%s) -lt $end_time ]; do
-            # Perform trivial computation 
-            for i in {1..1000}; do echo $i > /dev/null; done
-        done
-        attempt=$((attempt+1))
-    fi
-done
-
-echo "Pixi environment activated successfully after $attempt attempt(s)."
+source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml
 
 # get sample id from file name
 sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))

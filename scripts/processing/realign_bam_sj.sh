@@ -131,6 +131,7 @@ ls ${dir_prefix}/output/sj
 # copy out just the .SJ file
 echo "Copying out results"
 rsync -Prhltv ${dir_prefix}/output/sj/*SJ.out.tab* ${output_dir}
+rsync -Prhltv ${dir_prefix}/output/sj/*ReadsPerGene.out.tab* ${output_dir}
 
 echo "Done"
 

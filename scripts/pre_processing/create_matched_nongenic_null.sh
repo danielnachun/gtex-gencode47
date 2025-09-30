@@ -48,41 +48,8 @@ cat "${TMP_DIR}/intergenic_regions.bed" "${TMP_DIR}/intronic_regions.bed" | \
     bedtools sort -i - > "${TMP_DIR}/background_regions.bed"
 
 
-# this works but is too slow, python implementiaion in notebooks/matched_nongenic_null.ipynb
-# # find the nearest region that can accomedate each exon 
-# > "${TMP_DIR}/nongenic_exon_matches.bed"
-# TOTAL_EXONS=$(wc -l < "${TMP_DIR}/all_exons.bed")
+# find the nearest region that can accomedate each exon 
+# notebooks/matched_nongenic_null.ipynb
 
-# find_nearest_non_genic_region() {
-#     local exon="$1"
-#     local exon_chr=$(echo "$exon" | cut -f1)
-#     local exon_start=$(echo "$exon" | cut -f2)
-#     local exon_end=$(echo "$exon" | cut -f3)
-#     local exon_id=$(echo "$exon" | cut -f4)
-#     local gene_id=$(echo "$exon" | cut -f5)
-#     local exon_length=$((exon_end - exon_start))
-
-#     local nearest_region=$(awk -v chr="$exon_chr" -v start="$exon_start" -v exon_length="$exon_length" '
-#         $1 == chr && ($3 - $2) >= exon_length {
-#             distance = ($2 > start) ? $2 - start : start - $2
-#             if (min_distance == "" || distance < min_distance) {
-#                 min_distance = distance
-#                 nearest_region = $0
-#             }
-#         }
-#         END { print nearest_region }
-#     ' "${TMP_DIR}/background_regions.bed")
-
-#     if [ -n "$nearest_region" ]; then
-#         local region_start=$(echo "$nearest_region" | cut -f2)
-#         local region_end=$((region_start + exon_length))
-#         echo -e "$exon_chr\t$region_start\t$region_end\t${exon_id}_null\t${gene_id}_null"
-#     fi
-# }
-
-# # Use pv to show progress while reading the input file
-# pv -l -s "$TOTAL_EXONS" "${TMP_DIR}/all_exons.bed" | while read -r exon; do
-#     find_nearest_non_genic_region "$exon" >> "${TMP_DIR}/nongenic_exon_matches.bed"
-# done
 
 
