@@ -115,14 +115,6 @@ bash ${code_dir}/run_bam_to_fastq.sh \
 # activate the pixi enviroment for hyperediting
 source <(pixi shell-hook --environment calledsites --manifest-path ${code_dir}/pixi.toml)
 
-# TODO do we get different resutls if we run fastp first?
-# # run fastp on fastqs 
-# bash ${code_dir}/run_fastp_sprint.sh \
-#     --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
-#     --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
-#     --sample_id ${sample_id} \
-#     --tmp_dir ${dir_prefix}/tmp/fastq
-
 # Run ADAR-bismark 
 /home/klawren/oak/bioinformatics-tools/adar_bismark/Bismark/bismark --adar --hisat2 --non_directional --local \
   ${local_reference_dir}/${masked_genome_dir} \
@@ -164,40 +156,3 @@ source <(pixi shell-hook --environment calledsites --manifest-path ${code_dir}/p
 
 echo "Copying out results"
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
-
-
-
-
-echo "Copying out results"
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
-
-
-
-
-# # run sprint just on unaligned reads to get hyperedited reads 
-# bash ${code_dir}/run_sprint_from_fastq.sh \
-#     --fastq_1 ${dir_prefix}/tmp/unaligned_fastq/${sample_id}_1.fastq.gz \
-#     --fastq_2 ${dir_prefix}/tmp/unaligned_fastq/${sample_id}_2.fastq.gz \
-#     --sample_id ${sample_id} \
-#     --repeat_bed ${local_reference_dir}/${repeat_bed} \
-#     --reference_fasta ${local_reference_dir}/${reference_fasta} \
-#     --output_dir ${dir_prefix}/output/sprint_unaligned/${sample_id} \
-#     --code_dir ${code_dir} \
-#     --tmp_dir ${dir_prefix}/tmp/unaligned_fastq \
-#     --get_hyperedited_reads true
-
-
-echo "Copying out results"
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
-
-echo "Done"
-
-
-# python /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing/sprint_main.py \
-#     -1 /home/klawren/oak/gtex/output/test_bams/output_kate/sprint_unalign_split/GTEX-1C4CL-2126-SM-7IGQC/GTEX-1C4CL-2126-SM-7IGQC.unaligned_1.fastq \
-#     -2 /home/klawren/oak/gtex/output/test_bams/output_kate/sprint_unalign_split/GTEX-1C4CL-2126-SM-7IGQC/GTEX-1C4CL-2126-SM-7IGQC.unaligned_2.fastq \
-#     -ss 2 -rp /home/klawren/oak/gtex/data/sprint_references/hg38_repeat.bed -c 6 -p 6 \
-#     /home/klawren/oak/gtex/data/sprint_references/Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta \
-#     /home/klawren/oak/gtex/output/test_bams/output_kate/sprint/ss_2 \
-#     /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing/.pixi/envs/calledsites/bin/bwa \
-#     /oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing/.pixi/envs/calledsites/bin/samtools
