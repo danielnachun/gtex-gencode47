@@ -171,7 +171,7 @@ done < "${tissue_id_list}"
 
 
 # Create completion marker file to indicate successful processing
-completion_dir="${output_dir}/completed/multi_tissue"
+completion_dir="${output_dir}/completed/single_tissue"
 mkdir -p "${completion_dir}"
 completion_file="${completion_dir}/${ld_region}.completed"
 echo "Processing completed successfully for ld region ${ld_region}" > "${completion_file}"
