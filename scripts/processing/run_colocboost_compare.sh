@@ -29,6 +29,11 @@ options_array=(
     gene_bed_list
     covariate_path
     genotype_stem
+    gwas_id_list
+    gwas_phenotype_list
+    gwas_meta
+    ld_meta
+    gwas_column_matching
     v39_gene_id_path
     output_dir
     code_dir
@@ -56,6 +61,16 @@ while true; do
             covariate_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --genotype_stem )
             genotype_stem="${2}"; shift 2 ;;
+        --gwas_id_list )
+            gwas_id_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --gwas_phenotype_list )
+            gwas_phenotype_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --gwas_meta )
+            gwas_meta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --ld_meta )
+            ld_meta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --gwas_column_matching )
+            gwas_column_matching="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --v39_gene_id_path )
             v39_gene_id_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
@@ -82,6 +97,11 @@ ${code_dir}/colocboost_compare.R \
     --genotype_stem ${genotype_stem} \
     --phenotype_list ${gene_bed_list} \
     --covariate_path ${covariate_path} \
+    --gwas_id_list ${gwas_id_list} \
+    --gwas_phenotype_list ${gwas_phenotype_list} \
+    --gwas_meta ${gwas_meta} \
+    --ld_meta ${ld_meta} \
+    --gwas_column_matching ${gwas_column_matching} \
     --output_dir ${output_dir} \
     --maf_cutoff 0.01 \
     --mac_cutoff 0 \

@@ -24,9 +24,14 @@ check_for_directory() {
 options_array=(
     ld_region_list
     tissue_id_list
+    gwas_id_list
     genotype_stem
     covariate_dir
     expression_dir
+    gwas_dir
+    gwas_meta
+    ld_meta
+    gwas_column_matching
     all_v39_genes_path
     region_padding
     association_padding
@@ -46,12 +51,22 @@ while true; do
             ld_region_list="${2}"; shift 2 ;;
         --tissue_id_list )
             tissue_id_list="${2}"; shift 2 ;;
+        --gwas_id_list )
+            gwas_id_list="${2}"; shift 2 ;;
         --genotype_stem )
             genotype_stem="${2}"; shift 2 ;;
         --covariate_dir )
             covariate_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --expression_dir )
             expression_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --gwas_dir )
+            gwas_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --gwas_meta )
+            gwas_meta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --ld_meta )
+            ld_meta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --gwas_column_matching )
+            gwas_column_matching="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --all_v39_genes_path )
             all_v39_genes_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --region_padding )
@@ -80,7 +95,7 @@ local_genotype_stem="${working_dir}/$(basename "${genotype_stem}")"
 
 
 # activate the pixi enviroment
-source <(pixi shell-hook --environment pecotmr --manifest-path ${code_dir}/pixi.toml)
+source <(pixi shell-hook --environment pecotmr-dev --manifest-path ${code_dir}/pixi.toml)
 
 # map job id to line number and then to participant id
 line_number=${SLURM_ARRAY_TASK_ID}
@@ -111,6 +126,18 @@ if [ "${region_start_padded}" -lt 0 ]; then
     region_start_padded=0
 fi
 gene_region="${region_chr}:${region_start_padded}-${region_end_padded}"
+
+
+# Create a list of GWAS phenotype file paths for this job's region
+gwas_phenotype_list="${working_dir}/gwas_phenotype_list.txt"
+rm -f "${gwas_phenotype_list}"
+touch "${gwas_phenotype_list}"
+
+while read -r gwas_id; do
+    gwas_file="${gwas_dir}/imputed_${gwas_id}.txt.gz"
+    echo "${gwas_file}" >> "${gwas_phenotype_list}"
+done < "${gwas_id_list}"
+
 
 # Loop over each tissue_id in tissue_id_list
 while read -r tissue_id; do
@@ -159,6 +186,11 @@ while read -r tissue_id; do
             --gene_bed_list ${gene_bed_list} \
             --covariate_path ${covariate_path} \
             --genotype_stem ${local_genotype_stem} \
+            --gwas_id_list ${gwas_id_list} \
+            --gwas_phenotype_list ${gwas_phenotype_list} \
+            --gwas_meta ${gwas_meta} \
+            --ld_meta ${ld_meta} \
+            --gwas_column_matching ${gwas_column_matching} \
             --v39_gene_id_path ${all_v39_genes_path} \
             --output_dir ${output_dir}/${tissue_id} \
             --code_dir ${code_dir} 

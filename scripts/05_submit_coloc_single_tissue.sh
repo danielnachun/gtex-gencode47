@@ -3,14 +3,14 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/coloc_multi_tissue.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/coloc_single_tissue.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 
 
 # List all LD regions that do not have a completion file
 
-completion_dir="${output_dir}/completed/multi_tissue"
+completion_dir="${output_dir}/completed/single_tissue"
 mkdir -p "${completion_dir}"
 
 # Extract all LD regions from the BED file (skip header), convert to 1-based region string
@@ -42,19 +42,24 @@ echo "Submitting: ${num_ld_blocks}"
 
 
 sbatch_params=(
-    --output "${output_dir}/logs/coloc_multi_tissue/%A_%a.log"
-    --error "${output_dir}/logs/coloc_multi_tissue/%A_%a.log"
+    --output "${output_dir}/logs/coloc_single_tissue/%A_%a.log"
+    --error "${output_dir}/logs/coloc_single_tissue/%A_%a.log"
     --array "1-${num_ld_blocks}%250"
     --time 24:00:00
     --cpus-per-task 4
     --mem 64G
     --job-name coloc_ld_blocks
-    ${code_dir}/colocalize_regions_multi_tissue.sh
+    ${code_dir}/colocalize_regions_single_tissue.sh
         --ld_region_list ${missing_ld_regions_file}
         --tissue_id_list ${tissue_id_list}
+        --gwas_id_list ${gwas_id_list}
         --genotype_stem ${genotype_stem}
         --covariate_dir ${covariate_dir}
         --expression_dir ${expression_dir}
+        --gwas_dir ${gwas_dir}
+        --gwas_meta ${gwas_meta}
+        --ld_meta ${ld_meta}
+        --gwas_column_matching ${gwas_column_matching}
         --all_v39_genes_path ${all_v39_genes_path}
         --region_padding ${region_padding}
         --association_padding ${association_padding}
