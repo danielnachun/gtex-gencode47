@@ -3,12 +3,13 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/coloc_single_tissue.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/coloc_test.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 
 
 # List all LD regions that do not have a completion file
+output_dir="${output_dir}/single_tissue"
 
 completion_dir="${output_dir}/completed/single_tissue"
 mkdir -p "${completion_dir}"
@@ -48,7 +49,7 @@ sbatch_params=(
     --time 24:00:00
     --cpus-per-task 4
     --mem 64G
-    --job-name coloc_ld_blocks
+    --job-name single_tissue_coloc
     ${code_dir}/colocalize_regions_single_tissue.sh
         --ld_region_list ${missing_ld_regions_file}
         --tissue_id_list ${tissue_id_list}

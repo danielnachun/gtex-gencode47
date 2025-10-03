@@ -139,13 +139,14 @@ while read -r gwas_id; do
 done < "${gwas_id_list}"
 
 
+completion_dir="${output_dir}/completed/single_tissue"
+mkdir -p "${completion_dir}"
 # Loop over each tissue_id in tissue_id_list
 while read -r tissue_id; do
     # Set the expected output file for this tissue and LD region
-    colocboost_rds="${output_dir}/${tissue_id}/${tissue_id}.${ld_region}.all_genes.colocboost.rds"
-
+    completion_file="${completion_dir}/${tissue_id}/${tissue_id}_${ld_region}.completed"
     # Only run if the output file does not already exist
-    if [ ! -f "${colocboost_rds}" ]; then
+    if [ ! -f "${completion_file}" ]; then
         # Construct expression and covariate paths for this tissue
         expression_path="${expression_dir}/${tissue_id}.v11.normalized_expression.bed.gz"
         covariate_path="${covariate_dir}/${tissue_id}.v11.covariates.txt"
@@ -196,15 +197,15 @@ while read -r tissue_id; do
             --code_dir ${code_dir} 
 
         echo $(date +"[%b %d %H:%M:%S] Done with all genes for tissue ${tissue_id}")
+        echo "Processing completed successfully for ld region ${ld_region} in tissue ${tissue_id}" > "${completion_file}"
+        echo "Completion marker created: ${completion_file}"
     else
-        echo "Skipping tissue ${tissue_id} for region ${ld_region} because ${colocboost_rds} already exists."
+        echo "Skipping tissue ${tissue_id} for region ${ld_region} because ${completion_file} already exists."
     fi
 done < "${tissue_id_list}"
 
 
 # Create completion marker file to indicate successful processing
-completion_dir="${output_dir}/completed/single_tissue"
-mkdir -p "${completion_dir}"
-completion_file="${completion_dir}/${ld_region}.completed"
-echo "Processing completed successfully for ld region ${ld_region}" > "${completion_file}"
-echo "Completion marker created: ${completion_file}"
+overall_completion_file="${completion_dir}/${ld_region}.completed"
+echo "Processing completed successfully for ld region ${ld_region}" > "${overall_completion_file}"
+echo "Completion marker created: ${overall_completion_file}"

@@ -12,7 +12,8 @@ parser <- argparser::arg_parser("Script to run colocboost") |>
     argparser::add_argument("--ld_region", help = "LD block (for naming)") |>
     argparser::add_argument("--genotype_stem", help = "Path to genotype BED file") |>
     argparser::add_argument("--phenotype_list", help = "Path to list of phenotypes to analyze, one path per line") |>
-    argparser::add_argument("--covariate_path", help = "Path to covariates file") |>
+    argparser::add_argument("--covariate_path", help = "Path to covariates file", default = NULL) |>
+    argparser::add_argument("--covariate_list", help = "Optional path to list of covariate files, one per phenotype", default = NULL) |>
     argparser::add_argument("--gwas_id_list", help = "Path to list of GWAS IDs to analyze, one per line") |>
     argparser::add_argument("--gwas_phenotype_list", help = "Path to list of GWAS phenotypes to analyze, one path per line") |>
     argparser::add_argument("--gwas_meta", help = "Path to GWAS metadata file") |>
@@ -48,6 +49,18 @@ ld_meta             <- parsed_args$ld_meta
 gwas_column_matching <- parsed_args$gwas_column_matching
 
 covariate_path    <- parsed_args$covariate_path
+covariate_list_path <- parsed_args$covariate_list
+
+# Normalize optional args: treat "none" or empty string as NULL
+normalize_opt <- function(x) {
+    if (is.null(x)) return(NULL)
+    if (is.na(x)) return(NULL)
+    if (!nzchar(x)) return(NULL)
+    if (tolower(x) == "none") return(NULL)
+    x
+}
+covariate_path <- normalize_opt(covariate_path)
+covariate_list_path <- normalize_opt(covariate_list_path)
 variant_region    <- parsed_args$variant_region
 ld_region         <- parsed_args$ld_region
 output_dir       <- parsed_args$output_dir
@@ -66,6 +79,11 @@ if (!is.null(v39_gene_id_path)) {
     v39_gene_id_list <- NULL
 }
 
+# # DEBUG
+# gene_region <-  "chr1:0-1000000"
+# variant_region <- "chr1:0-1000000"
+# ld_region <- "chr1:0-1000000"
+
 cat("Arguments:\n")
 cat("  tissue_id:", tissue_id, "\n")
 cat("  gene_region:", gene_region, "\n")
@@ -73,7 +91,8 @@ cat("  variant_region:", variant_region, "\n")
 cat("  ld_region:", ld_region, "\n")
 cat("  genotype_stem:", genotype_stem, "\n")
 cat("  phenotype_list:", paste(phenotype_list, collapse = ", "), "\n")
-cat("  covariate_path:", covariate_path, "\n")
+cat("  covariate_path:", if (is.null(covariate_path)) "<NULL>" else covariate_path, "\n")
+cat("  covariate_list:", if (is.null(covariate_list_path)) "<NULL>" else covariate_list_path, "\n")
 cat("  gwas_id_list:", paste(gwas_id_list, collapse = ", "), "\n")
 cat("  gwas_phenotype_list:", paste(gwas_phenotype_list, collapse = ", "), "\n")
 cat("  gwas_meta:", gwas_meta, "\n")
@@ -93,10 +112,14 @@ cat("\nLoading required libraries...\n")
 library(devtools)
 library(magrittr)
 library(dplyr)
-library(pecotmr)
+#library(pecotmr)
 library(colocboost)
 # TODO: make this not hardcoded, once pecotmr is updated on CRAN
 devtools::load_all("/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/pecotmr")
+
+# TODO: make this not hardcoded
+# Source formatter to enable function call mode
+source("/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing/format_colocboost.R")
 
 cat("Libraries loaded successfully\n")
 
@@ -139,11 +162,24 @@ gene_names <- sub("\\.bed\\.gz$", "", basename(phenotype_list))
 
 cat("\nLoading regional data...\n")
 data_start_time <- Sys.time()
+# Validate covariate inputs: require at least one of path or list
+if (is.null(covariate_list_path) && is.null(covariate_path)) {
+    stop("You must provide either --covariate_list or --covariate_path")
+}
+
 region_data <- load_multitask_regional_data(
     region = gene_region,
     genotype_list = c(genotype_stem),
     phenotype_list = phenotype_list,
-    covariate_list = rep(covariate_path, length(phenotype_list)),
+    covariate_list = if (!is.null(covariate_list_path)) {
+        cl <- readLines(covariate_list_path)
+        if (length(cl) != length(phenotype_list)) {
+            stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
+        }
+        cl
+    } else {
+        rep(covariate_path, length(phenotype_list))
+    },
     conditions_list_individual = gene_names,
     sumstat_path_list = gwas_phenotype_list,
     column_file_path_list = rep(gwas_column_matching, length(gwas_phenotype_list)),
@@ -161,6 +197,29 @@ region_data <- load_multitask_regional_data(
 data_end_time <- Sys.time()
 cat("Data loading completed in:", round(difftime(data_end_time, data_start_time, units = "mins"), 2), "minutes\n")
 
+# ===========================
+# Run Colocboost on All Genes
+# ===========================
+cat("\nStarting colocboost analysis on all genes...\n")
+analysis_start_time <- Sys.time()
+res <- colocboost_analysis_pipeline(
+    region_data,
+    pip_cutoff_to_skip_ind = rep(0, length(phenotype_list)),
+    pip_cutoff_to_skip_sumstat = rep(0, length(gwas_phenotype_list)),
+    qc_method = c("rss_qc"), 
+    maf_cutoff=maf_cutoff, 
+    xqtl_coloc = TRUE,
+    joint_gwas = TRUE,
+    separate_gwas = TRUE
+)
+analysis_end_time <- Sys.time()
+cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
+
+output_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".all_genes.colocboost.rds"))
+cat("Saving results to:", output_path, "\n")
+saveRDS(res, file = output_path) 
+# Also write formatted credible set outputs alongside the RDS
+format_colocboost(output_path, sub("\\.rds$", "", output_path))
 
 # ===========================
 # Run Colocboost Analysis on individual genes
@@ -233,6 +292,8 @@ if (run_single_gene) {
                                              paste0(tissue_id, ".", ld_region, ".", sub("^.*\\.(ENSG[0-9]+).*$", "\\1", gene_name), ".colocboost.rds"))
         saveRDS(res_single, file = single_gene_output_path)
         cat("Saved result for", gene_name, "to:", single_gene_output_path, "\n")
+        # Also write formatted credible set outputs alongside the RDS
+        format_colocboost(single_gene_output_path, sub("\\.rds$", "", single_gene_output_path))
     }
     
     cat("\nSingle gene analysis completed for all", length(gene_names), "genes\n")
@@ -298,30 +359,12 @@ if (run_v39_genes) {
         output_path_v39 <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".v39_genes.colocboost.rds"))
         cat("Saving v39 results to:", output_path_v39, "\n")
         saveRDS(res_v39, file = output_path_v39)
+        # Also write formatted credible set outputs alongside the RDS
+        format_colocboost(output_path_v39, sub("\\.rds$", "", output_path_v39))
     }
 }
 
-# ===========================
-# Run Colocboost on All Genes
-# ===========================
-cat("\nStarting colocboost analysis...\n")
-analysis_start_time <- Sys.time()
-res <- colocboost_analysis_pipeline(
-    region_data,
-    pip_cutoff_to_skip_ind = rep(0, length(phenotype_list)),
-    pip_cutoff_to_skip_sumstat = rep(0, length(gwas_phenotype_list)),
-    qc_method = c("rss_qc"), 
-    maf_cutoff=maf_cutoff, 
-    xqtl_coloc = TRUE,
-    joint_gwas = TRUE,
-    separate_gwas = TRUE
-)
-analysis_end_time <- Sys.time()
-cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
 
-output_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".all_genes.colocboost.rds"))
-cat("Saving results to:", output_path, "\n")
-saveRDS(res, file = output_path) 
 
 
 

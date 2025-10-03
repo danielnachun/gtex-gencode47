@@ -39,10 +39,10 @@ fi
 sbatch_params=(
     --output "${out_dir}/logs/generate_ld/%A_%a.log"
     --error "${out_dir}/logs/generate_ld/%A_%a.log"
-    --array "1-${regions_count}%250"
+    --array "1-${regions_count}"
     --time 2:00:00
     --cpus-per-task 8
-    --mem 128G
+    --mem 50G
     --job-name generate_ld
     ${code_dir}/generate_ld.sh \
         --genotype_prefix ${genotype_prefix} \

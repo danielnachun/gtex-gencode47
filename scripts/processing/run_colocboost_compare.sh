@@ -27,6 +27,7 @@ options_array=(
     association_region
     gene_region
     gene_bed_list
+    covariate_list
     covariate_path
     genotype_stem
     gwas_id_list
@@ -57,8 +58,10 @@ while true; do
             gene_region="${2}"; shift 2 ;;
         --gene_bed_list )
             gene_bed_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --covariate_list )
+            covariate_list="${2}"; shift 2 ;;
         --covariate_path )
-            covariate_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+            covariate_path="${2}"; shift 2 ;;
         --genotype_stem )
             genotype_stem="${2}"; shift 2 ;;
         --gwas_id_list )
@@ -85,9 +88,26 @@ while true; do
     esac
 done
 
+# Normalize optional covariate inputs and validate that at least one is provided
+covariate_list="${covariate_list:-none}"
+covariate_path="${covariate_path:-none}"
+
+if [[ "${covariate_list}" == "none" && "${covariate_path}" == "none" ]]; then
+    echo "Error: you must provide either --covariate_list or --covariate_path." >&2
+    exit 1
+fi
+
+if [[ "${covariate_list}" != "none" ]]; then
+    check_for_file "--covariate_list" "${covariate_list}"
+fi
+
+if [[ "${covariate_path}" != "none" ]]; then
+    check_for_file "--covariate_path" "${covariate_path}"
+fi
+
 mkdir -p ${output_dir}
 
-echo "Running colocboost on LD region ${ld_region} in tissue ${tissue_id} on the gene bed list ${gene_bed_list}"
+echo $(date +"[%b %d %H:%M:%S] Running colocboost on LD region ${ld_region} in tissue ${tissue_id} on the gene bed list ${gene_bed_list}")
 
 ${code_dir}/colocboost_compare.R \
     --tissue_id ${tissue_id} \
@@ -96,6 +116,7 @@ ${code_dir}/colocboost_compare.R \
     --ld_region ${ld_region} \
     --genotype_stem ${genotype_stem} \
     --phenotype_list ${gene_bed_list} \
+    --covariate_list ${covariate_list} \
     --covariate_path ${covariate_path} \
     --gwas_id_list ${gwas_id_list} \
     --gwas_phenotype_list ${gwas_phenotype_list} \
