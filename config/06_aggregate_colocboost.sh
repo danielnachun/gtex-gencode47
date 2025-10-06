@@ -5,3 +5,4 @@ tissue_id_list="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr
 coloc_base_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/coloc
 
 code_dir=/home/klawren/oak/gtex/scripts/processing
+submit_on=scg
