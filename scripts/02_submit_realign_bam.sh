@@ -42,7 +42,7 @@ completed_count=$((original_count - to_process_count))
 bam_list_folder="$output_dir/file_lists/file_lists_realign"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
-split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
+split -l "${batch_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
 bam_list_paths="${output_dir}/file_lists/file_list_paths_realign.txt"
@@ -58,7 +58,7 @@ fi
 
 echo "Already completed: ${completed_count}"
 echo "To be realigned: ${to_process_count}"
-echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
+echo "Batches needed: $(( (to_process_count + batch_size - 1) / batch_size ))"
 echo "Batches created: ${num_batches}"
 
 
@@ -67,10 +67,10 @@ sbatch_params=(
     --error "${output_dir}/logs/realign/%A_%a.log"
     --array "1-${num_batches}%250"
     --time 12:00:00
-    --cpus-per-task "${step_size}"
+    --cpus-per-task "${batch_size}"
     --mem 128G
     --job-name realign_bam_batch
-    ${code_dir}/batch_realign_bam.sh \
+    ${code_dir}/batch_02_realign_bam.sh \
         --reference_dir ${reference_dir} \
         --vcf_dir ${vcf_dir} \
         --output_dir ${output_dir} \
@@ -79,7 +79,7 @@ sbatch_params=(
         --reference_fasta ${reference_fasta} \
         --rsem_ref_dir ${rsem_ref_dir} \
         --star_index ${star_index} \
-        --step_size ${step_size}
+        --batch_size ${batch_size}
 )
 
 

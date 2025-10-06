@@ -29,7 +29,7 @@ options_array=(
     reference_fasta
     masked_genome_dir
     splicesites
-    step_size
+    batch_size
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -54,8 +54,8 @@ while true; do
             masked_genome_dir="${2}"; shift 2 ;;
         --splicesites )
             splicesites="${2}"; shift 2 ;;
-        --step_size )
-            step_size="${2}"; shift 2 ;;
+        --batch_size )
+            batch_size="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -79,7 +79,7 @@ ls ${reference_dir_prefix}
 
 
 # run the batch
-cat "${bam_list}" | parallel -j"${step_size}" --ungroup --verbose \
+cat "${bam_list}" | parallel -j"${batch_size}" --ungroup --verbose \
         "${code_dir}/align_hyperediting.sh" \
         --local_reference_dir "${reference_dir_prefix}/" \
         --output_dir "${output_dir}" \

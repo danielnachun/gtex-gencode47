@@ -139,12 +139,12 @@ while read -r gwas_id; do
 done < "${gwas_id_list}"
 
 
-completion_dir="${output_dir}/completed/single_tissue"
+completion_dir="${output_dir}/completed"
 mkdir -p "${completion_dir}"
 # Loop over each tissue_id in tissue_id_list
 while read -r tissue_id; do
     # Set the expected output file for this tissue and LD region
-    completion_file="${completion_dir}/${tissue_id}/${tissue_id}_${ld_region}.completed"
+    completion_file="${completion_dir}/${tissue_id}_${ld_region}.completed"
     # Only run if the output file does not already exist
     if [ ! -f "${completion_file}" ]; then
         # Construct expression and covariate paths for this tissue

@@ -43,7 +43,7 @@ completed_count=$((original_count - to_process_count))
 bam_list_folder="$output_dir/file_lists/file_lists_mutect"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
-split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_call}") "${bam_list_folder}/bam_list_" 
+split -l "${batch_size}" --additional-suffix=".txt" <(echo "${bams_to_call}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
 bam_list_paths="${output_dir}/file_lists/file_list_paths_mutect.txt"
@@ -59,7 +59,7 @@ fi
 
 echo "Already completed: ${completed_count}"
 echo "To be quantified: ${to_process_count}"
-echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
+echo "Batches needed: $(( (to_process_count + batch_size - 1) / batch_size ))"
 echo "Batches created: ${num_batches}"
 
 sbatch_params=(
@@ -67,10 +67,10 @@ sbatch_params=(
     --error "${output_dir}/logs/mutect/%A_%a.log"
     --array "1-${num_batches}%250"
     --time 24:00:00
-    --cpus-per-task "${step_size}"
+    --cpus-per-task "${batch_size}"
     --mem 128G
     --job-name call_mutect
-    ${code_dir}/batch_call_mutect.sh \
+    ${code_dir}/batch_03.B_call_mutect.sh \
         --reference_dir ${reference_dir} \
         --output_dir ${output_dir} \
         --code_dir ${code_dir} \
@@ -83,7 +83,7 @@ sbatch_params=(
         --gene_intervals_bed ${gene_intervals_bed} \
         --full_vcf_file ${full_vcf_file} \
         --exac_reference ${exac_reference} \
-        --step_size ${step_size}
+        --batch_size ${batch_size}
 )
 
 # Submit on either sherlock or scg

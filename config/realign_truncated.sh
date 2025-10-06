@@ -9,6 +9,6 @@ output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/truncated
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 regenerate_all=true
 # step limited by RAM availible on most sherlock nodes (~64G/bam needed)
-step_size=1
+batch_size=1
 max_array_size=1000
 submit_on=scg

@@ -125,9 +125,9 @@ ${code_dir}/colocboost_compare.R \
     --gwas_column_matching ${gwas_column_matching} \
     --output_dir ${output_dir} \
     --maf_cutoff 0.01 \
-    --mac_cutoff 0 \
+    --mac_cutoff 10 \
     --xvar_cutoff 0 \
-    --imiss_cutoff 0 \
+    --imiss_cutoff 0.9 \
     --run_single_gene TRUE \
     --run_v39_genes TRUE \
     --v39_gene_id_path ${v39_gene_id_path}

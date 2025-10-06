@@ -44,7 +44,7 @@ sbatch_params=(
     --cpus-per-task 8
     --mem 50G
     --job-name generate_ld
-    ${code_dir}/generate_ld.sh \
+    ${code_dir}/04_generate_ld.sh \
         --genotype_prefix ${genotype_prefix} \
         --sample_ids ${reformated_sample_ids} \
         --output_dir ${out_dir} \

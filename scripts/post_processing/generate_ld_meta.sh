@@ -12,6 +12,12 @@ if [[ -z "${OUTPUT_TSV:-}" ]]; then
 fi
 
 output_path="${out_dir%/}/ld_metadata.tsv"
+# clear the file if it exists
+if [[ -f "$output_path" ]]; then
+  echo "Clearing $output_path"
+  > "$output_path"
+fi
+
 padded_ld_blocks_path="${out_dir%/}/padded_ld_blocks.tsv"
 
 # Build the metadata TSV

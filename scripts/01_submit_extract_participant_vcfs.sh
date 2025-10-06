@@ -18,7 +18,8 @@ fi
 # if false, do all in participant_id_list that do not already vcfs and vcf indexs
 regenerate_all=false
 
-mkdir -p ${output_dir}/logs
+logs_dir="${output_dir}/logs/extract_participant_vcfs"
+mkdir -p "${logs_dir}"
 
 
 # Create new participant list for processing
@@ -59,38 +60,40 @@ echo "Original participant count: ${original_count}"
 echo "Already completed: ${completed_count}"
 echo "To be processed: ${to_process_count}"
 
-# submit on either sherlock or scg
+# Exit early if nothing to process
+if [ "${to_process_count}" -eq 0 ]; then
+    echo "All participants processed"
+    exit 0
+fi
+
+# Build shared sbatch parameters
+sbatch_params=(
+    --output "${logs_dir}/%A_%a.log"
+    --error "${logs_dir}/%A_%a.log"
+    --array "1-${to_process_count}%250"
+    --time 4:00:00
+    --cpus-per-task 1
+    --mem 64G
+    --job-name participant_vcf
+    ${code_dir}/01_extract_participant_vcfs.sh \
+        --participant_id_list ${new_participant_list} \
+        --full_vcf ${full_vcf} \
+        --output_dir ${output_dir} \
+        --code_dir ${code_dir}
+)
+
+# Submit on either sherlock or scg
 if [ "${submit_on}" = 'sherlock' ]; then
-    # submit on sherlock
-    sbatch --output "${output_dir}/logs/extract_participant_vcfs/%A_%a.log" \
-        --error "${output_dir}/logs/extract_participant_vcfs/%A_%a.log" \
-        --array "1-${to_process_count}%250" \
-        --time 4:00:00 \
+    sbatch \
         --partition normal,owners \
-        --cpus-per-task 1 \
-        --mem 64G \
-        --job-name participant_vcf \
-        ${code_dir}/extract_participant_vcfs.sh \
-            --participant_id_list ${new_participant_list} \
-            --full_vcf ${full_vcf} \
-            --output_dir ${output_dir} \
-            --code_dir ${code_dir}
+        --tmp 200G \
+        "${sbatch_params[@]}" 
 elif [ "${submit_on}" = 'scg' ]; then
-    # submit on scg
-    sbatch --output "${output_dir}/logs/%A_%a.log" \
-        --error "${output_dir}/logs/%A_%a.log" \
-        --array "1-${to_process_count}%250" \
-        --time 4:00:00 \
+    sbatch \
         --account smontgom \
         --partition batch \
-        --cpus-per-task 1 \
-        --mem 64G \
-        --job-name participant_vcf \
-        ${code_dir}/extract_participant_vcfs.sh \
-            --participant_id_list ${new_participant_list} \
-            --full_vcf ${full_vcf} \
-            --output_dir ${output_dir} \
-            --code_dir ${code_dir}
+        --constraint="nvme" \
+        "${sbatch_params[@]}" 
 else
     echo "must submit on either 'sherlock' or 'scg'"
 fi

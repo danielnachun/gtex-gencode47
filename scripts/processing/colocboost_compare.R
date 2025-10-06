@@ -30,6 +30,7 @@ parser <- argparser::arg_parser("Script to run colocboost") |>
 
 parsed_args <- argparser::parse_args(parser)
 
+DEBUG <- FALSE
 
 tissue_id         <- parsed_args$tissue_id
 gene_region       <- parsed_args$gene_region
@@ -167,59 +168,77 @@ if (is.null(covariate_list_path) && is.null(covariate_path)) {
     stop("You must provide either --covariate_list or --covariate_path")
 }
 
-region_data <- load_multitask_regional_data(
-    region = gene_region,
-    genotype_list = c(genotype_stem),
-    phenotype_list = phenotype_list,
-    covariate_list = if (!is.null(covariate_list_path)) {
-        cl <- readLines(covariate_list_path)
-        if (length(cl) != length(phenotype_list)) {
-            stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
-        }
-        cl
-    } else {
-        rep(covariate_path, length(phenotype_list))
-    },
-    conditions_list_individual = gene_names,
-    sumstat_path_list = gwas_phenotype_list,
-    column_file_path_list = rep(gwas_column_matching, length(gwas_phenotype_list)),
-    LD_meta_file_path_list = rep(ld_meta, length(gwas_phenotype_list)),
-    conditions_list_sumstat = gwas_id_list,
-    match_LD_sumstat = lapply(gwas_id_list, function(x) c(x)),
-    n_samples = n_samples,
-    n_cases = n_cases,
-    n_controls = n_controls,
-    mac_cutoff = mac_cutoff,
-    xvar_cutoff = xvar_cutoff,
-    imiss_cutoff = imiss_cutoff,
-    association_window = variant_region
-)
+# Define the path for saving/loading sumstat_data for this LD block
+sumstat_data_path <- file.path(output_dir, paste0(ld_region, ".sumstat_data.rds"))
+region_data_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".region_data.rds"))
+
+if (file.exists(sumstat_data_path)) {
+    # If sumstat_data already exists, load region_data and overwrite sumstat_data
+    cat("sumstat_data file exists for this LD block. Loading previous sumstat_data, and overwriting sumstat_data in region_data.\n")
+    region_data <- load_multitask_regional_data(
+        region = gene_region,
+        genotype_list = c(genotype_stem),
+        phenotype_list = phenotype_list,
+        covariate_list = if (!is.null(covariate_list_path)) {
+            cl <- readLines(covariate_list_path)
+            if (length(cl) != length(phenotype_list)) {
+                stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
+            }
+            cl
+        } else {
+            rep(covariate_path, length(phenotype_list))
+        },
+        conditions_list_individual = gene_names,
+        maf_cutoff = maf_cutoff,
+        mac_cutoff = mac_cutoff,
+        xvar_cutoff = xvar_cutoff,
+        imiss_cutoff = imiss_cutoff,
+        association_window = variant_region
+    )
+    sumstat_data <- readRDS(sumstat_data_path)
+    region_data$sumstat_data <- sumstat_data
+} else {
+    # Load region data as usual
+    region_data <- load_multitask_regional_data(
+        region = gene_region,
+        genotype_list = c(genotype_stem),
+        phenotype_list = phenotype_list,
+        covariate_list = if (!is.null(covariate_list_path)) {
+            cl <- readLines(covariate_list_path)
+            if (length(cl) != length(phenotype_list)) {
+                stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
+            }
+            cl
+        } else {
+            rep(covariate_path, length(phenotype_list))
+        },
+        conditions_list_individual = gene_names,
+        sumstat_path_list = gwas_phenotype_list,
+        column_file_path_list = rep(gwas_column_matching, length(gwas_phenotype_list)),
+        LD_meta_file_path_list = rep(ld_meta, length(gwas_phenotype_list)),
+        conditions_list_sumstat = gwas_id_list,
+        match_LD_sumstat = lapply(gwas_id_list, function(x) c(x)),
+        n_samples = n_samples,
+        n_cases = n_cases,
+        n_controls = n_controls,
+        maf_cutoff = maf_cutoff,
+        mac_cutoff = mac_cutoff,
+        xvar_cutoff = xvar_cutoff,
+        imiss_cutoff = imiss_cutoff,
+        association_window = variant_region
+    )
+    # Write out sumstat_data for this LD block
+    saveRDS(region_data$sumstat_data, file = sumstat_data_path)
+    # Optionally, also save the full region_data for future use
+    if (DEBUG) {
+        saveRDS(region_data, file = region_data_path)
+    }
+}
+
 data_end_time <- Sys.time()
 cat("Data loading completed in:", round(difftime(data_end_time, data_start_time, units = "mins"), 2), "minutes\n")
 
-# ===========================
-# Run Colocboost on All Genes
-# ===========================
-cat("\nStarting colocboost analysis on all genes...\n")
-analysis_start_time <- Sys.time()
-res <- colocboost_analysis_pipeline(
-    region_data,
-    pip_cutoff_to_skip_ind = rep(0, length(phenotype_list)),
-    pip_cutoff_to_skip_sumstat = rep(0, length(gwas_phenotype_list)),
-    qc_method = c("rss_qc"), 
-    maf_cutoff=maf_cutoff, 
-    xqtl_coloc = TRUE,
-    joint_gwas = TRUE,
-    separate_gwas = TRUE
-)
-analysis_end_time <- Sys.time()
-cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
 
-output_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".all_genes.colocboost.rds"))
-cat("Saving results to:", output_path, "\n")
-saveRDS(res, file = output_path) 
-# Also write formatted credible set outputs alongside the RDS
-format_colocboost(output_path, sub("\\.rds$", "", output_path))
 
 # ===========================
 # Run Colocboost Analysis on individual genes
@@ -274,12 +293,12 @@ if (run_single_gene) {
         analysis_start_time <- Sys.time()
         res_single <- colocboost_analysis_pipeline(
             region_data_single,
-            pip_cutoff_to_skip_ind = c(0),
-            pip_cutoff_to_skip_sumstat = rep(0, length(gwas_phenotype_list)),
+            pip_cutoff_to_skip_ind = c(-1),
+            pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
             qc_method = c("rss_qc"), 
             maf_cutoff=maf_cutoff, 
-            xqtl_coloc = TRUE,
-            joint_gwas = TRUE,
+            xqtl_coloc = FALSE,
+            joint_gwas = FALSE,
             separate_gwas = TRUE
         )
         analysis_end_time <- Sys.time()
@@ -345,13 +364,13 @@ if (run_v39_genes) {
         analysis_start_time_v39 <- Sys.time()
         res_v39 <- colocboost_analysis_pipeline(
             region_data_v39,
-            pip_cutoff_to_skip_ind = rep(0, sum(keep_idx)),
-            pip_cutoff_to_skip_sumstat = rep(0, length(gwas_phenotype_list)),
+            pip_cutoff_to_skip_ind = rep(-1, sum(keep_idx)),
+            pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
             qc_method = c("rss_qc"), 
             maf_cutoff=maf_cutoff, 
-            xqtl_coloc = TRUE,
+            xqtl_coloc = FALSE,
             joint_gwas = TRUE,
-            separate_gwas = TRUE
+            separate_gwas = FALSE
         )
         analysis_end_time_v39 <- Sys.time()
         cat("Colocboost on v39 genes completed in:", round(difftime(analysis_end_time_v39, analysis_start_time_v39, units = "mins"), 2), "minutes\n")
@@ -366,6 +385,29 @@ if (run_v39_genes) {
 
 
 
+# ===========================
+# Run Colocboost on All Genes
+# ===========================
+cat("\nStarting colocboost analysis on all genes...\n")
+analysis_start_time <- Sys.time()
+res <- colocboost_analysis_pipeline(
+    region_data,
+    pip_cutoff_to_skip_ind = rep(-1, length(phenotype_list)),
+    pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
+    qc_method = c("rss_qc"), 
+    maf_cutoff=maf_cutoff, 
+    xqtl_coloc = FALSE,
+    joint_gwas = TRUE,
+    separate_gwas = TRUE
+)
+analysis_end_time <- Sys.time()
+cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
+
+output_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".all_genes.colocboost.rds"))
+cat("Saving results to:", output_path, "\n")
+saveRDS(res, file = output_path) 
+# Also write formatted credible set outputs alongside the RDS
+format_colocboost(output_path, sub("\\.rds$", "", output_path))
 
 
 

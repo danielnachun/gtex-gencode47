@@ -11,6 +11,6 @@ vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/truncated_samples
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 regenerate_all=true
-step_size=1
+batch_size=1
 max_array_size=1000
 submit_on=sherlock

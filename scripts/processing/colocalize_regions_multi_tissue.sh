@@ -139,7 +139,7 @@ while read -r gwas_id; do
 done < "${gwas_id_list}"
 
 
-completion_dir="${output_dir}/completed/aggregated"
+completion_dir="${output_dir}/completed"
 mkdir -p "${completion_dir}"
 
 # Build aggregated gene_bed_list and covariate_list across all tissues

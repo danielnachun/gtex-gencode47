@@ -3,7 +3,7 @@
 # set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_sj_all_tissues.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/realign_sj.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 
@@ -22,7 +22,7 @@ if [ "${regenerate_all}" = true ]; then
     bams_to_realign=$(sed "s|^|${bam_dir}/|" <<< "$full_bam_list")
 else
     # only realign a bam if the v11 sj does not already exist
-    bams_to_realign=$(grep -v -F -f <(find "${output_dir}/" -name "*.SJ.out.tab.gz" -exec basename {} \; | sed 's|\.SJ\.out\.tab\.gz$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
+    bams_to_realign=$(grep -v -F -f <(find "${output_dir}/" -name "*.ReadsPerGene.out.tab.gz" -exec basename {} \; | sed 's|\.ReadsPerGene\.out\.tab\.gz$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 fi
 
 # Check if bams_to_realign is empty
@@ -42,7 +42,7 @@ completed_count=$((original_count - to_process_count))
 bam_list_folder="$output_dir/file_lists/file_lists_realign_sj"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
-split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
+split -l "${batch_size}" --additional-suffix=".txt" <(echo "${bams_to_realign}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
 bam_list_paths="${output_dir}/file_lists/file_list_paths_realign_sj.txt"
@@ -58,7 +58,7 @@ fi
 
 echo "Already completed: ${completed_count}"
 echo "To be realigned: ${to_process_count}"
-echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
+echo "Batches needed: $(( (to_process_count + batch_size - 1) / batch_size ))"
 echo "Batches created: ${num_batches}"
 
 
@@ -67,7 +67,7 @@ sbatch_params=(
     --error "${output_dir}/logs/realign_sj/%A_%a.log"
     --array "1-${num_batches}%${max_parallel_jobs}"
     --time 12:00:00
-    --cpus-per-task "${step_size}"
+    --cpus-per-task "${batch_size}"
     --mem 128G
     --job-name realign_bam_sj_batch
     ${code_dir}/batch_realign_bam_sj.sh \
@@ -78,7 +78,7 @@ sbatch_params=(
         --bam_list_paths ${bam_list_paths} \
         --reference_fasta ${reference_fasta} \
         --star_index ${star_index} \
-        --step_size ${step_size}
+        --batch_size ${batch_size}
 )
 
 

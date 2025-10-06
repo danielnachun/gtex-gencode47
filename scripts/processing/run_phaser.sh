@@ -73,14 +73,14 @@ done
 
 echo $(date +"[%b %d %H:%M:%S] Subsetting chromosome from bam files")
 bam_stagin_dir=${working_dir}/bam_staging_${chromosome}
-# mkdir -p ${bam_stagin_dir}
-# for bam_file in ${bam_files}; do
-#     echo ${bam_file}
-#     samtools view -h $bam_file ${chromosome} | \
-#     grep -v "vW:i:[2-7]" | \
-#     samtools view -h1 | samtools sort > ${bam_stagin_dir}/$(basename $bam_file)
-#     samtools index -@ ${num_threads} ${bam_stagin_dir}/$(basename $bam_file)
-# done
+mkdir -p ${bam_stagin_dir}
+for bam_file in ${bam_files}; do
+    echo ${bam_file}
+    samtools view -h $bam_file ${chromosome} | \
+    grep -v "vW:i:[2-7]" | \
+    samtools view -h1 | samtools sort > ${bam_stagin_dir}/$(basename $bam_file)
+    samtools index -@ ${num_threads} ${bam_stagin_dir}/$(basename $bam_file)
+done
 
 echo $(date +"[%b %d %H:%M:%S] Running phASER")
 phaser_wrapper phase ${participant_id} ${bam_stagin_dir}/*.bam \

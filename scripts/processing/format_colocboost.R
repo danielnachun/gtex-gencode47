@@ -11,7 +11,7 @@
 
 # NOTE: argparser is only needed for CLI mode; we import it conditionally below.
 
-format_colocboost <- function(pecotmr_colocboost, output_prefix) {
+format_colocboost <- function(pecotmr_colocboost, output_prefix, verbose = TRUE) {
   if (is.null(pecotmr_colocboost) || identical(pecotmr_colocboost, "")) {
     stop("Missing required argument: pecotmr_colocboost", call. = FALSE)
   }
@@ -19,8 +19,10 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix) {
     stop("Missing required argument: output_prefix", call. = FALSE)
   }
 
-  cat("Input RDS:", pecotmr_colocboost, "\n")
-  cat("Output prefix:", output_prefix, "\n")
+  if (isTRUE(verbose)) {
+    cat("Input RDS:", pecotmr_colocboost, "\n")
+    cat("Output prefix:", output_prefix, "\n")
+  }
 
   # ----------------------------
   # Load object
@@ -35,14 +37,14 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix) {
   if (is.list(obj) && !is.null(obj$xqtl_coloc)) {
     cs_df <- extract_credible_sets(obj$xqtl_coloc)
     outfile <- paste0(output_prefix, ".xqtl_coloc.txt")
-    write_cs_table(cs_df, outfile)
+    write_cs_table(cs_df, outfile, verbose = verbose)
     processed_any <- TRUE
   }
 
   if (is.list(obj) && !is.null(obj$joint_gwas)) {
     cs_df <- extract_credible_sets(obj$joint_gwas)
     outfile <- paste0(output_prefix, ".joint_gwas.txt")
-    write_cs_table(cs_df, outfile)
+    write_cs_table(cs_df, outfile, verbose = verbose)
     processed_any <- TRUE
   }
 
@@ -58,7 +60,7 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix) {
       if (is.list(comp) && !is.null(comp$data_info)) {
         cs_df <- extract_credible_sets(comp)
         outfile <- paste0(output_prefix, ".separate_gwas.", key, ".txt")
-        write_cs_table(cs_df, outfile)
+        write_cs_table(cs_df, outfile, verbose = verbose)
         processed_any <- TRUE
       }
     }
@@ -208,7 +210,7 @@ extract_credible_sets <- function(colocboost_result) {
 # ----------------------------
 # Writer
 # ----------------------------
-write_cs_table <- function(cs_df, outfile) {
+write_cs_table <- function(cs_df, outfile, verbose = TRUE) {
   if (nrow(cs_df) > 0) {
     if (is.list(cs_df$neg_log10_p_value)) {
       cs_df$neg_log10_p_value <- vapply(
@@ -225,7 +227,9 @@ write_cs_table <- function(cs_df, outfile) {
   outdir <- dirname(outfile)
   if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
   write.table(cs_df, file = outfile, sep = "\t", row.names = FALSE, quote = FALSE)
-  cat("Wrote credible sets table to:", outfile, "\n")
+  if (isTRUE(verbose)) {
+    cat("Wrote credible sets table to:", outfile, "\n")
+  }
 }
 
 # ----------------------------
@@ -242,12 +246,14 @@ if (length(script_path) > 0 && identical(basename(script_path), "format_colocboo
 
   parser <- argparser::arg_parser("Format colocboost results into credible sets tables") |>
     argparser::add_argument("--pecotmr_colocboost", help = "Path to colocboost .rds file") |>
-    argparser::add_argument("--output_prefix", help = "Output file prefix (directory + stem)")
+    argparser::add_argument("--output_prefix", help = "Output file prefix (directory + stem)") |>
+    argparser::add_argument("--quiet", help = "Suppress all printing (no stdout messages)", flag = TRUE)
 
   args <- argparser::parse_args(parser)
 
   pecotmr_colocboost <- args$pecotmr_colocboost
   output_prefix <- args$output_prefix
+  quiet <- if (!is.null(args$quiet)) args$quiet else FALSE
 
-  invisible(format_colocboost(pecotmr_colocboost, output_prefix))
+  invisible(format_colocboost(pecotmr_colocboost, output_prefix, verbose = !quiet))
 }

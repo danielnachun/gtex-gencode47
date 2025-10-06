@@ -47,7 +47,7 @@ completed_count=$((original_count - to_process_count))
 bam_list_folder="$output_dir/file_lists/rnaseqc_sherlock_bam_file_lists"
 rm -rf "${bam_list_folder}"
 mkdir -p "${bam_list_folder}"
-split -l "${step_size}" --additional-suffix=".txt" <(echo "${bams_to_quantify}") "${bam_list_folder}/bam_list_" 
+split -l "${batch_size}" --additional-suffix=".txt" <(echo "${bams_to_quantify}") "${bam_list_folder}/bam_list_" 
 
 # create a file with one folder path per line
 bam_list_paths="${output_dir}/file_lists/rnaseqc_sherlock_bam_list_paths.txt"
@@ -64,7 +64,7 @@ fi
 
 echo "Already completed: ${completed_count}"
 echo "To be quantified completed: ${to_process_count}"
-echo "Batches needed: $(( (to_process_count + step_size - 1) / step_size ))"
+echo "Batches needed: $(( (to_process_count + batch_size - 1) / batch_size ))"
 echo "Batches created: ${num_batches}"
 echo "Batches running: ${num_batches}"
 
@@ -74,11 +74,11 @@ sbatch --output "${output_dir}/logs/rnaseqc_null/%A_%a.log" \
     --array "1-${to_process_count}%250" \
     --array="1-${num_batches}%250" \
     --time 6:00:00 \
-    --cpus-per-task="${step_size}" \
+    --cpus-per-task="${batch_size}" \
     --partition normal,owners \
     --mem 64G \
     --job-name rnaseq_null_batch \
-    ${code_dir}/batch_quantify_rnaseqc_null.sh \
+    ${code_dir}/batch_03.A_quantify_rnaseqc_null.sh \
         --reference_dir ${reference_dir} \
         --output_dir ${output_dir} \
         --code_dir ${code_dir} \
@@ -87,5 +87,5 @@ sbatch --output "${output_dir}/logs/rnaseqc_null/%A_%a.log" \
         --chr_sizes ${chr_sizes} \
         --genes_gtf ${genes_gtf} \
         --intervals_bed ${intervals_bed} \
-        --step_size ${step_size} \
+        --batch_size ${batch_size} \
         --bam_file_end ${bam_file_end}

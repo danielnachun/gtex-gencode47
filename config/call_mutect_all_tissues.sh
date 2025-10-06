@@ -1,4 +1,4 @@
-realign_bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10//oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues_quantifications/genome_bam
+realign_bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues_quantifications/genome_bam
 gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/other_references/all_tissues/all_samples.txt
 reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/mutect_references
 reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta
@@ -12,6 +12,6 @@ code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 full_vcf_file=GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.vcf.gz
 regenerate_all=false
-step_size=2
+batch_size=2
 max_array_size=1000
 submit_on=sherlock
