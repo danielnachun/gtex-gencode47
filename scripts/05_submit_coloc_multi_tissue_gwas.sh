@@ -42,8 +42,8 @@ echo "Submitting: ${num_ld_blocks}"
 
 
 sbatch_params=(
-    --output "${output_dir}/logs/coloc_multi_tissue/%A_%a.log"
-    --error "${output_dir}/logs/coloc_multi_tissue/%A_%a.log"
+    --output "${output_dir}/logs/coloc_multi_tissue/%A/%A_%a.log"
+    --error "${output_dir}/logs/coloc_multi_tissue/%A/%A_%a.log"
     --array "1-${num_ld_blocks}%250"
     --time 24:00:00
     --cpus-per-task 1

@@ -69,8 +69,8 @@ echo "Batches created: ${num_batches}"
 echo "Batches running: ${num_batches}"
 
 
-sbatch --output "${output_dir}/logs/rnaseqc_null/%A_%a.log" \
-    --error "${output_dir}/logs/rnaseqc_null/%A_%a.log" \
+sbatch --output "${output_dir}/logs/rnaseqc_null/%A/%A_%a.log" \
+    --error "${output_dir}/logs/rnaseqc_null/%A/%A_%a.log" \
     --array "1-${to_process_count}%250" \
     --array="1-${num_batches}%250" \
     --time 6:00:00 \

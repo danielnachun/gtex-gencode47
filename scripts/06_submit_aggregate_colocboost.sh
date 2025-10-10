@@ -3,8 +3,11 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/aggregate_colocboost.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/06_aggregate_colocboost.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
+
+# Default value for regenerate if not set in config
+regenerate="${regenerate:-false}"
 
 num_tissues=$(wc -l < "${tissue_id_list}")
 echo "Number of tissues: ${num_tissues}"
@@ -15,19 +18,19 @@ if [ "${num_tissues}" -eq 0 ]; then
 fi
 
 sbatch_params=(
-    --output "${output_dir}/logs/aggregate_colocboost/%A_%a.log"
-    --error "${output_dir}/logs/aggregate_colocboost/%A_%a.log"
+    --output "${coloc_base_dir}/logs/aggregate_colocboost/%A/%A_%a.log"
+    --error "${coloc_base_dir}/logs/aggregate_colocboost/%A/%A_%a.log"
     --array "1-${num_tissues}%250"
     --time 12:00:00
     --cpus-per-task 8
     --mem 128G
     --job-name aggregate_colocboost
-    ${code_dir}/06_aggregate_colocboost.sh \
+    ${code_dir}/06_aggregate_colocboosts.sh \
         --tissue_id_list ${tissue_id_list} \
         --coloc_base_dir ${coloc_base_dir} \
-        --code_dir ${code_dir}
+        --code_dir ${code_dir} \
+        --regenerate ${regenerate}
 )
-
 
 # Submit on either sherlock or scg
 if [ "${submit_on}" = 'sherlock' ]; then

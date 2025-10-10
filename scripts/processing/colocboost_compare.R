@@ -241,6 +241,33 @@ cat("Data loading completed in:", round(difftime(data_end_time, data_start_time,
 
 
 # ===========================
+# Run Colocboost on All Genes
+# ===========================
+cat("\nStarting colocboost analysis on all genes...\n")
+analysis_start_time <- Sys.time()
+res <- colocboost_analysis_pipeline(
+    region_data,
+    pip_cutoff_to_skip_ind = rep(-1, length(phenotype_list)),
+    pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
+    qc_method = c("rss_qc"), 
+    maf_cutoff=maf_cutoff, 
+    xqtl_coloc = FALSE,
+    joint_gwas = TRUE,
+    separate_gwas = FALSE
+)
+analysis_end_time <- Sys.time()
+cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
+
+output_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".all_genes.colocboost.rds"))
+cat("Saving results to:", output_path, "\n")
+saveRDS(res, file = output_path) 
+# Also write formatted credible set outputs alongside the RDS
+format_colocboost(output_path, sub("\\.rds$", "", output_path))
+
+
+
+
+# ===========================
 # Run Colocboost Analysis on individual genes
 # ===========================
 if (run_single_gene) {
@@ -384,30 +411,6 @@ if (run_v39_genes) {
 }
 
 
-
-# ===========================
-# Run Colocboost on All Genes
-# ===========================
-cat("\nStarting colocboost analysis on all genes...\n")
-analysis_start_time <- Sys.time()
-res <- colocboost_analysis_pipeline(
-    region_data,
-    pip_cutoff_to_skip_ind = rep(-1, length(phenotype_list)),
-    pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
-    qc_method = c("rss_qc"), 
-    maf_cutoff=maf_cutoff, 
-    xqtl_coloc = FALSE,
-    joint_gwas = TRUE,
-    separate_gwas = TRUE
-)
-analysis_end_time <- Sys.time()
-cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
-
-output_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".all_genes.colocboost.rds"))
-cat("Saving results to:", output_path, "\n")
-saveRDS(res, file = output_path) 
-# Also write formatted credible set outputs alongside the RDS
-format_colocboost(output_path, sub("\\.rds$", "", output_path))
 
 
 

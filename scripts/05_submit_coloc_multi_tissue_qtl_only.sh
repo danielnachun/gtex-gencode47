@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/coloc_test.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/06_coloc_test.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 output_dir="${output_dir}/multi_tissue_qtl_only"
@@ -41,8 +41,8 @@ echo "Submitting: ${num_ld_blocks}"
 
 
 sbatch_params=(
-    --output "${output_dir}/logs/coloc_multi_tissue_qtl_only/%A_%a.log"
-    --error "${output_dir}/logs/coloc_multi_tissue_qtl_only/%A_%a.log"
+    --output "${output_dir}/logs/coloc_multi_tissue_qtl_only/%A/%A_%a.log"
+    --error "${output_dir}/logs/coloc_multi_tissue_qtl_only/%A/%A_%a.log"
     --array "1-${num_ld_blocks}%250"
     --time 24:00:00
     --cpus-per-task 4

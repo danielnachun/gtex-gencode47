@@ -36,6 +36,8 @@ options_array=(
     ld_meta
     gwas_column_matching
     v39_gene_id_path
+    run_single_gene
+    run_v39_genes
     output_dir
     code_dir
 )
@@ -76,6 +78,10 @@ while true; do
             gwas_column_matching="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --v39_gene_id_path )
             v39_gene_id_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --run_single_gene )
+            run_single_gene="${2}"; shift 2 ;;
+        --run_v39_genes )
+            run_v39_genes="${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --code_dir )
@@ -91,6 +97,8 @@ done
 # Normalize optional covariate inputs and validate that at least one is provided
 covariate_list="${covariate_list:-none}"
 covariate_path="${covariate_path:-none}"
+run_single_gene="${run_single_gene:-TRUE}"
+run_v39_genes="${run_v39_genes:-TRUE}"
 
 if [[ "${covariate_list}" == "none" && "${covariate_path}" == "none" ]]; then
     echo "Error: you must provide either --covariate_list or --covariate_path." >&2
@@ -128,8 +136,8 @@ ${code_dir}/colocboost_compare.R \
     --mac_cutoff 10 \
     --xvar_cutoff 0 \
     --imiss_cutoff 0.9 \
-    --run_single_gene TRUE \
-    --run_v39_genes TRUE \
+    --run_single_gene ${run_single_gene} \
+    --run_v39_genes ${run_v39_genes} \
     --v39_gene_id_path ${v39_gene_id_path}
 
 echo $(date +"[%b %d %H:%M:%S] Done with gene bed list ${gene_bed_list}")

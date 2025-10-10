@@ -51,6 +51,9 @@ bcftools = "1.15.*"
 
 
 [feature.pecotmr.dependencies]
+python = "3.12.*"
+pandas = "2.3.*"
+tqdm = "4.67.*"
 r-pecotmr = "0.3.16.*"
 r-argparser = "0.7.*"
 r-readr = "2.1.*"
@@ -59,6 +62,9 @@ r-colocboost = "1.0.4*"
 tabix = "1.11.*"
 
 [feature.pecotmr-dev.dependencies]
+python = "3.12.*"
+pandas = "2.3.*"
+tqdm = "4.67.*"
 r-pecotmr = "0.3.16.*"
 r-devtools="2.4.5*"
 r-argparser = "0.7.*"

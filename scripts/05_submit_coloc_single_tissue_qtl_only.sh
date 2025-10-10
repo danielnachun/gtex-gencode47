@@ -3,7 +3,7 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/coloc_all.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/05_coloc_all.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 output_dir="${output_dir}/single_tissue_qtl_only"
@@ -41,14 +41,14 @@ echo "Submitting: ${num_ld_blocks}"
 
 
 sbatch_params=(
-    --output "${output_dir}/logs/coloc_qtl_only/%A_%a.log"
-    --error "${output_dir}/logs/coloc_qtl_only/%A_%a.log"
+    --output "${output_dir}/logs/coloc_qtl_only/%A/%A_%a.log"
+    --error "${output_dir}/logs/coloc_qtl_only/%A/%A_%a.log"
     --array "1-${num_ld_blocks}%250"
     --time 24:00:00
     --cpus-per-task 8
     --mem 256G
     --job-name qtl_only_coloc
-    ${code_dir}/colocalize_regions_qtl_only.sh
+    ${code_dir}/05_colocalize_regions_qtl_only.sh
         --ld_region_list ${missing_ld_regions_file}
         --tissue_id_list ${tissue_id_list}
         --genotype_stem ${genotype_stem}

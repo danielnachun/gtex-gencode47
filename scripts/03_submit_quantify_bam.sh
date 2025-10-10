@@ -65,8 +65,8 @@ echo "Batches created: ${num_batches}"
 
 
 sbatch_params=(
-    --output "${output_dir}/logs/quantify/%A_%a.log"
-    --error "${output_dir}/logs/quantify/%A_%a.log"
+    --output "${output_dir}/logs/quantify/%A/%A_%a.log"
+    --error "${output_dir}/logs/quantify/%A/%A_%a.log"
     --array "1-${num_batches}%250"
     # --time 10:00:00
     --cpus-per-task "${batch_size}"

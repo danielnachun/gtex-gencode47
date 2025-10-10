@@ -46,7 +46,9 @@ done
 aggregated_output_dir="${aggregated_output_dir:-}" 
 tissue_id="${tissue_id:-}"
 
-python3 "${code_dir}/combine_colocboost.py" \
+echo "Python version: $(python --version 2>&1)"
+echo "Python path: $(which python)"
+python "${code_dir}/combine_colocboost.py" \
   --coloc_output_dir "${coloc_output_dir}" \
   ${aggregated_output_dir:+--aggregated_output_dir "${aggregated_output_dir}"} \
   ${tissue_id:+--tissue_id "${tissue_id}"} \

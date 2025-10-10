@@ -68,8 +68,8 @@ fi
 
 # Build shared sbatch parameters
 sbatch_params=(
-    --output "${logs_dir}/%A_%a.log"
-    --error "${logs_dir}/%A_%a.log"
+    --output "${logs_dir}/%A/%A_%a.log"
+    --error "${logs_dir}/%A/%A_%a.log"
     --array "1-${to_process_count}%250"
     --time 4:00:00
     --cpus-per-task 1

@@ -50,16 +50,6 @@ done
 
 out_prefix="${file%.rds}"
 
-# Check if output files already exist
-shopt -s nullglob
-txt_files=("${out_prefix}"*.txt)
-shopt -u nullglob
-
-if [[ ${#txt_files[@]} -gt 0 ]]; then
-  #echo "Skipping ${file} because a .txt file already exists for prefix ${out_prefix}."
-  exit 0
-fi
-
 # Process the file
 if Rscript "${code_dir}/format_colocboost.R" --pecotmr_colocboost "${file}" --output_prefix "${out_prefix}" --quiet; then
   exit 0

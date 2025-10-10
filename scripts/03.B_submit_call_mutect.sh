@@ -63,8 +63,8 @@ echo "Batches needed: $(( (to_process_count + batch_size - 1) / batch_size ))"
 echo "Batches created: ${num_batches}"
 
 sbatch_params=(
-    --output "${output_dir}/logs/mutect/%A_%a.log"
-    --error "${output_dir}/logs/mutect/%A_%a.log"
+    --output "${output_dir}/logs/mutect/%A/%A_%a.log"
+    --error "${output_dir}/logs/mutect/%A/%A_%a.log"
     --array "1-${num_batches}%250"
     --time 24:00:00
     --cpus-per-task "${batch_size}"

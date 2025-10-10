@@ -33,10 +33,13 @@ options_array=(
     ld_meta
     gwas_column_matching
     all_v39_genes_path
+    run_single_gene
+    run_v39_genes
     region_padding
     association_padding
     output_dir
     code_dir
+    strong_only
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -69,6 +72,10 @@ while true; do
             gwas_column_matching="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --all_v39_genes_path )
             all_v39_genes_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --run_single_gene )
+            run_single_gene="${2}"; shift 2 ;;
+        --run_v39_genes )
+            run_v39_genes="${2}"; shift 2 ;;
         --region_padding )
             region_padding="${2}"; shift 2 ;;
         --association_padding )
@@ -77,6 +84,8 @@ while true; do
             output_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --strong_only )
+            strong_only="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -84,6 +93,9 @@ while true; do
             exit 1
     esac
 done
+
+# Set default value for strong_only if not provided
+strong_only="${strong_only:-FALSE}"
 
 mkdir -p ${output_dir}
 
@@ -128,15 +140,79 @@ fi
 gene_region="${region_chr}:${region_start_padded}-${region_end_padded}"
 
 
+# Function to check if GWAS has strong associations (p < 1e-8)
+check_strong_associations() {
+    local gwas_file="$1"
+    local region_chr="$2"
+    local region_start="$3"
+    local region_end="$4"
+    
+    # Use tabix to extract variants in the region and check for strong associations
+    # Look for p-value < 1e-8 directly in the pvalue column
+    local p_threshold=1e-8
+    
+    # Count variants with p < 1e-8
+    local strong_count=$(tabix -h "${gwas_file}" "${region_chr}:${region_start}-${region_end}" 2>/dev/null | \
+       awk -v p_thresh="${p_threshold}" 'NR>1 && $11 < p_thresh {count++} END {print count+0}')
+    
+    # Check if any variants have strong associations
+    if [ "${strong_count}" -gt 0 ]; then
+        return 0  # Has strong associations
+    else
+        return 1  # No strong associations
+    fi
+}
+
 # Create a list of GWAS phenotype file paths for this job's region
 gwas_phenotype_list="${working_dir}/gwas_phenotype_list.txt"
 rm -f "${gwas_phenotype_list}"
 touch "${gwas_phenotype_list}"
 
-while read -r gwas_id; do
-    gwas_file="${gwas_dir}/imputed_${gwas_id}.txt.gz"
-    echo "${gwas_file}" >> "${gwas_phenotype_list}"
-done < "${gwas_id_list}"
+# Create filtered GWAS ID list if strong_only is enabled
+if [[ "${strong_only}" == "TRUE" ]]; then
+    # Create non-chr version for tabix (GWAS filtering only)
+    region_chr_tabix=$(echo "${region_chr}" | sed 's/^chr//')
+    echo "Filtering GWAS files for strong associations (p < 1e-8) in region ${ld_region}"
+    filtered_gwas_id_list="${working_dir}/filtered_gwas_id_list.txt"
+    rm -f "${filtered_gwas_id_list}"
+    touch "${filtered_gwas_id_list}"
+    
+    while read -r gwas_id; do
+        gwas_file="${gwas_dir}/imputed_${gwas_id}.txt.gz"
+        if [[ -f "${gwas_file}" ]]; then
+            if check_strong_associations "${gwas_file}" "${region_chr_tabix}" "${association_region_start}" "${association_region_end}"; then
+                echo "${gwas_id}" >> "${filtered_gwas_id_list}"
+                echo "${gwas_file}" >> "${gwas_phenotype_list}"
+                echo "  ${gwas_id}: PASSED (has strong associations)"
+            else
+                echo "  ${gwas_id}: FILTERED (no strong associations)"
+            fi
+        else
+            echo "  ${gwas_id}: SKIPPED (file not found: ${gwas_file})"
+        fi
+    done < "${gwas_id_list}"
+    
+    # Count original and filtered lists
+    original_count=$(wc -l < "${gwas_id_list}")
+    filtered_count=$(wc -l < "${filtered_gwas_id_list}")
+    
+    # Update gwas_id_list to use filtered list
+    gwas_id_list="${filtered_gwas_id_list}"
+    echo "Filtered from ${original_count} to ${filtered_count} GWAS files"
+    
+    # Exit if no GWAS files passed the filter
+    if [ "${filtered_count}" -eq 0 ]; then
+        echo "No GWAS files with strong associations found in region ${ld_region}"
+        echo "Skipping colocalization analysis for this region"
+        exit 0
+    fi
+else
+    # No filtering - use all GWAS files
+    while read -r gwas_id; do
+        gwas_file="${gwas_dir}/imputed_${gwas_id}.txt.gz"
+        echo "${gwas_file}" >> "${gwas_phenotype_list}"
+    done < "${gwas_id_list}"
+fi
 
 
 completion_dir="${output_dir}/completed"
@@ -193,6 +269,8 @@ while read -r tissue_id; do
             --ld_meta ${ld_meta} \
             --gwas_column_matching ${gwas_column_matching} \
             --v39_gene_id_path ${all_v39_genes_path} \
+            --run_single_gene ${run_single_gene} \
+            --run_v39_genes ${run_v39_genes} \
             --output_dir ${output_dir}/${tissue_id} \
             --code_dir ${code_dir} 
 
