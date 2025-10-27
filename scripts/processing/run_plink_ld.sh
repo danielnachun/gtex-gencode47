@@ -63,18 +63,21 @@ THREADS="${THREADS:-8}"
 mkdir -p ${output_dir}
 echo $(date +"[%b %d %H:%M:%S] Running PLINK LD for chr${chr_id}:${from_bp}-${to_bp}")
 
-# Create the variant list
+# Create the variant list with quality control filters
 plink \
   --bfile "$genotype_prefix" \
   --keep "$sample_ids" \
   --chr "$chr_id" \
   --from-bp "$from_bp" \
   --to-bp "$to_bp" \
+  --maf 0.009 \
+  --geno 0.05 \
+  --hwe 1e-6 \
   --make-bed \
   --threads "$THREADS" \
   --out "$output_dir/LD_chr${chr_id}_${from_bp}_${to_bp}"
 
-# Generate LD matrix from the variant list
+# Generate LD matrix from the filtered variant list
 plink \
   --bfile "$output_dir/LD_chr${chr_id}_${from_bp}_${to_bp}" \
   --r square gz \

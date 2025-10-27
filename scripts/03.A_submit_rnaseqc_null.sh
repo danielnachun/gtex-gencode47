@@ -25,8 +25,10 @@ if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
     bams_to_quantify="${full_bam_list}"
 else
-    # only quantify a bam if the rnaseqc output does not already exist
-    bams_to_quantify=$(grep -v -F -f <(ls "${output_dir}/rnaseq_qc/" | sed "s|gene_tpm\.gct\.gz$|$bam_file_end|") <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
+    # only quantify a bam if the completion marker file does not already exist
+    completion_dir="${output_dir}/completed/rnaseqc_null"
+    all_completion_files=$(printf "%s\n" ${full_bam_list} | sed "s|^|${completion_dir}/|;s|\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam$|.completed|")
+    bams_to_quantify=$(printf "%s\n" ${full_bam_list} | paste - <(printf "%s\n" ${all_completion_files}) | awk '{if(system("[ -f \""$2"\" ]")==0) next; print $1}')
 fi
 
 # Check if bams_to_quantify is empty

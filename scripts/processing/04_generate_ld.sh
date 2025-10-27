@@ -63,11 +63,6 @@ source <(pixi shell-hook --environment plink --manifest-path ${code_dir}/pixi.to
 
 # map job id to line number and then to region
 line_number=${SLURM_ARRAY_TASK_ID}
-# add 1 to the job id to skip the header line
-line_number=$((line_number + 1))
-
-# hacky way to deal with more than 1000 regions 
-line_number=$((line_number + 900))
 
 # pull chr, from_bp, to_bp from the line of the regions_bed
 region="$(sed "${line_number}q; d" "${regions_bed}")" 

@@ -33,7 +33,7 @@ options_array=(
     intervals_bed
     ipa_annotation
     editing_bed
-    batch_size
+    num_parallel
 )
 
 
@@ -67,8 +67,8 @@ while true; do
             ipa_annotation="${2}"; shift 2 ;;
         --editing_bed )
             editing_bed="${2}"; shift 2 ;;
-        --batch_size )
-            batch_size="${2}"; shift 2 ;;
+        --num_parallel )
+            num_parallel="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -88,22 +88,25 @@ mkdir -p "${reference_dir_prefix}"
 rsync -PrhLtv "${reference_dir}"/* "${reference_dir_prefix}/"
 
 # I'm getting errors requesting too many jobs?
-echo "Batch size: ${batch_size}"
+echo "Parallel jobs: ${num_parallel}"
 echo "Requested CPUs: ${SLURM_CPUS_PER_TASK}"
 
-# run the batch
-cat "${bam_list}" | parallel -j"${batch_size}" --ungroup --verbose \
-        "${code_dir}/03_quantify_bam.sh" \
-        --local_reference_dir "${reference_dir_prefix}" \
-        --vcf_dir "${vcf_dir}" \
-        --output_dir "${output_dir}" \
-        --code_dir "${code_dir}" \
-        --bam_file {} \
-        --reference_fasta "${reference_fasta}" \
-        --chr_sizes "${chr_sizes}" \
-        --genes_gtf "${genes_gtf}" \
-        --intervals_bed "${intervals_bed}" \
-        --ipa_annotation "${ipa_annotation}" \
-        --editing_bed "${editing_bed}" \        
+# Process all BAMs in batch file continuously with num_parallel jobs running
+echo "Processing all BAMs with ${num_parallel} parallel jobs"
+
+# Process all BAMs in the batch file continuously
+cat "${bam_list}" | parallel -j"${num_parallel}" --ungroup --verbose \
+    "${code_dir}/03_quantify_bam.sh" \
+    --local_reference_dir "${reference_dir_prefix}" \
+    --vcf_dir "${vcf_dir}" \
+    --output_dir "${output_dir}" \
+    --code_dir "${code_dir}" \
+    --bam_file {} \
+    --reference_fasta "${reference_fasta}" \
+    --chr_sizes "${chr_sizes}" \
+    --genes_gtf "${genes_gtf}" \
+    --intervals_bed "${intervals_bed}" \
+    --ipa_annotation "${ipa_annotation}" \
+    --editing_bed "${editing_bed}"
 
 echo "Batch finished"

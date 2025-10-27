@@ -21,8 +21,10 @@ if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
     bams_to_call=$(sed "s|^|${realign_bam_dir}/|" <<< "$full_bam_list")
 else
-    # only quantify a bam if the haplotype_caller output does not already exist
-    bams_to_call=$(grep -v -F -f <(find "${output_dir}/completed/mutect/" -name "*.completed" -exec basename {} \; | sed 's|\.completed$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
+    # only call mutect if the completion marker file does not already exist
+    completion_dir="${output_dir}/completed/mutect"
+    all_completion_files=$(printf "%s\n" ${full_bam_list} | sed "s|^|${completion_dir}/|;s|\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam$|.completed|")
+    bams_to_call=$(printf "%s\n" ${full_bam_list} | paste - <(printf "%s\n" ${all_completion_files}) | awk '{if(system("[ -f \""$2"\" ]")==0) next; print $1}' | sed "s|^|${realign_bam_dir}/|")
 fi
 
 # Check if bams_to_call is empty

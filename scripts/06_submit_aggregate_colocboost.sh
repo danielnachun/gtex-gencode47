@@ -3,11 +3,12 @@
 set -o xtrace -o nounset -o errexit
 
 # source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/06_aggregate_colocboost.sh"
+CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/06_aggregate_colocboost_gwas.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
-# Default value for regenerate if not set in config
+# Default values if not set in config
 regenerate="${regenerate:-false}"
+skip_robust="${skip_robust:-false}"
 
 num_tissues=$(wc -l < "${tissue_id_list}")
 echo "Number of tissues: ${num_tissues}"
@@ -29,7 +30,8 @@ sbatch_params=(
         --tissue_id_list ${tissue_id_list} \
         --coloc_base_dir ${coloc_base_dir} \
         --code_dir ${code_dir} \
-        --regenerate ${regenerate}
+        --regenerate ${regenerate} \
+        --skip_robust ${skip_robust}
 )
 
 # Submit on either sherlock or scg

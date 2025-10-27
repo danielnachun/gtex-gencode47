@@ -33,6 +33,7 @@ get_robust_colocalization_with_conversion <- function(cb_output,
   }
   
   # First apply standard robust filtering
+  if (verbose) cat("DEBUG: Applying robust filtering with cos_npc_cutoff =", cos_npc_cutoff, "and npc_outcome_cutoff =", npc_outcome_cutoff, "\n")
   tryCatch({
     # Suppress the "No colocalization results in this region!" warning
     robust_res <- suppressWarnings(colocboost::get_robust_colocalization(
@@ -43,6 +44,7 @@ get_robust_colocalization_with_conversion <- function(cb_output,
       weight_fudge_factor = weight_fudge_factor,
       coverage = coverage
     ))
+    if (verbose) cat("DEBUG: get_robust_colocalization completed successfully\n")
   }, error = function(e) {
     if (verbose) cat("Warning: get_robust_colocalization failed:", e$message, "\n")
     return(cb_output)
@@ -51,14 +53,26 @@ get_robust_colocalization_with_conversion <- function(cb_output,
   # Check if robust_res has the expected structure
   if (is.null(robust_res) || is.null(robust_res$cos_details) || is.null(robust_res$cos_details$cos)) {
     if (verbose) cat("Warning: Robust results do not have expected structure, returning original object\n")
+    if (verbose) cat("DEBUG: robust_res is null:", is.null(robust_res), "\n")
+    if (!is.null(robust_res)) {
+      if (verbose) cat("DEBUG: robust_res$cos_details is null:", is.null(robust_res$cos_details), "\n")
+      if (!is.null(robust_res$cos_details)) {
+        if (verbose) cat("DEBUG: robust_res$cos_details$cos is null:", is.null(robust_res$cos_details$cos), "\n")
+      }
+    }
     return(cb_output)
   }
+  
+  if (verbose) cat("DEBUG: Robust filtering successful, checking results...\n")
   
   # Identify filtered trait_shared entries by comparing original and robust results
   original_cos_ids <- names(cb_output$cos_details$cos$cos_index)
   robust_cos_ids <- names(robust_res$cos_details$cos$cos_index)
   filtered_cos_ids <- setdiff(original_cos_ids, robust_cos_ids)
   
+  if (verbose) cat("DEBUG: Original COS sets:", length(original_cos_ids), "\n")
+  if (verbose) cat("DEBUG: Robust COS sets:", length(robust_cos_ids), "\n")
+  if (verbose) cat("DEBUG: Filtered COS sets:", length(filtered_cos_ids), "\n")
   if (verbose) cat("Found", length(filtered_cos_ids), "filtered colocalization sets to convert\n")
   
   if (length(filtered_cos_ids) > 0) {
@@ -577,6 +591,57 @@ extract_credible_sets <- function(colocboost_result, verbose = TRUE, include_con
 
   all_cs <- c(trait_specific_cs, trait_shared_cs)
   if (length(all_cs) > 0) {
+    # Ensure all data frames have the same column structure before rbinding
+    if (include_conversion_metadata) {
+      # Standardize columns for conversion metadata case
+      all_cs <- lapply(all_cs, function(df) {
+        # Ensure all required columns exist
+        required_cols <- c("phenotype_id", "variant_id", "pip", "neg_log10_p_value", 
+                          "cs_id", "cs_type", "cos_npc", "npc_outcome", 
+                          "original_cos_id", "original_cos_npc", "original_npc_outcome", 
+                          "converted_from_shared")
+        
+        for (col in required_cols) {
+          if (!col %in% names(df)) {
+            if (col == "original_cos_id") {
+              df[[col]] <- NA_character_
+            } else if (col == "original_cos_npc" || col == "original_npc_outcome") {
+              df[[col]] <- NA_real_
+            } else if (col == "converted_from_shared") {
+              df[[col]] <- FALSE
+            } else {
+              df[[col]] <- NA
+            }
+          }
+        }
+        
+        # Reorder columns to match expected order
+        df <- df[, required_cols, drop = FALSE]
+        return(df)
+      })
+    } else {
+      # Standardize columns for non-conversion metadata case
+      all_cs <- lapply(all_cs, function(df) {
+        # Ensure all required columns exist
+        required_cols <- c("phenotype_id", "variant_id", "pip", "neg_log10_p_value", 
+                          "cs_id", "cs_type", "cos_npc", "npc_outcome")
+        
+        for (col in required_cols) {
+          if (!col %in% names(df)) {
+            if (col == "cos_npc") {
+              df[[col]] <- NA_real_
+            } else {
+              df[[col]] <- NA
+            }
+          }
+        }
+        
+        # Reorder columns to match expected order
+        df <- df[, required_cols, drop = FALSE]
+        return(df)
+      })
+    }
+    
     result_df <- do.call(rbind, all_cs)
     return(result_df)
   } else {

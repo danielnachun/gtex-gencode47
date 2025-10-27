@@ -39,7 +39,6 @@ options_array=(
     code_dir
     bam_file
     reference_fasta
-    rsem_ref_dir
     star_index
 )
 
@@ -63,8 +62,6 @@ while true; do
             bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
-        --rsem_ref_dir )
-            rsem_ref_dir="${2}"; shift 2 ;;
         --star_index )
             star_index="${2}"; shift 2 ;;
         --)
@@ -80,7 +77,6 @@ source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pi
 
 sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
-
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
@@ -118,7 +114,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
         --sample_id ${sample_id} \
         --vcf_file ${vcf_dir_tmp}/${vcf_file} \
-        --tmp_dir ${dir_prefix}/tmp/star
+        --tmp_dir ${dir_prefix}/output/star
 else
     echo "Warning: VCF files not found, running STAR without WASP..."
     # align with star
@@ -127,36 +123,13 @@ else
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
         --sample_id ${sample_id} \
-        --tmp_dir ${dir_prefix}/tmp/star
+        --tmp_dir ${dir_prefix}/output/star
 fi
 
-# # sync bams
-# bash ${code_dir}/run_bam_sync.sh \
-#     --initial_bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
-#     --star_aligned_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.sortedByCoord.out.bam \
-#     --sample_id ${sample_id} \
-#     --tmp_dir ${dir_prefix}/tmp/bamsync \
-#     --output_dir ${dir_prefix}/output/flagstat
+ls ${dir_prefix}/output/star
 
-# # mark duplicates, get the genome bam that we save
-# bash ${code_dir}/run_mark_duplicates.sh \
-#     --genome_bam_file ${dir_prefix}/tmp/bamsync/${sample_id}.Aligned.sortedByCoord.out.patched.bam \
-#     --output_prefix ${sample_id}.Aligned.sortedByCoord.out.patched.v11md \
-#     --output_dir ${dir_prefix}/output/genome_bam
-
-# run rsem, save isoform quantification
-bash ${code_dir}/run_rsem.sh \
-    --rsem_ref_dir ${local_reference_dir}/${rsem_ref_dir} \
-    --transcriptome_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.toTranscriptome.out.bam \
-    --sample_id ${sample_id} \
-    --output_dir ${dir_prefix}/output/rsem
-
+# copy out all result files except the sorted BAM and its index, handle gzipped & non-gzipped files
 echo "Copying out results"
-rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
-
-# Copy out all STAR result files except the sorted BAM and its index, handle gzipped & non-gzipped files
-echo "Copying out STAR results"
-mkdir -p "${output_dir}/star"
 for ext in Aligned.toTranscriptome.out.bam \
            Chimeric.out.junction \
            Chimeric.out.junction.gz \
@@ -169,20 +142,17 @@ for ext in Aligned.toTranscriptome.out.bam \
            SJ.out.tab.gz \
            _STARpass1
 do
-    file_path="${dir_prefix}/tmp/star/${sample_id}.${ext}"
+    file_path="${dir_prefix}/output/star/${sample_id}.${ext}"
     if [[ -e "${file_path}" ]]; then
-        rsync -Prhltv "${file_path}" "${output_dir}/star/"
+        rsync -Prhltv "${file_path}" "${output_dir}"
     else
         echo "Warning: ${file_path} not found. Skipping."
     fi
 done
 
-# Create completion marker
-completion_dir="${output_dir}/completed/realign"
+# Create completion marker file to indicate successful processing
+completion_dir="${output_dir}/completed/star"
 mkdir -p "${completion_dir}"
 completion_file="${completion_dir}/${sample_id}.completed"
-echo "Processing completed successfully for sample: ${sample_id}" > "${completion_file}"
+echo "Processing extra star files completed successfully for sample: ${sample_id}" > "${completion_file}"
 echo "Completion marker created: ${completion_file}"
-
-echo "Done"
-

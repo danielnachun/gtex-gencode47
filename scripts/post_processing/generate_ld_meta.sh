@@ -2,7 +2,7 @@
 
 set -o xtrace -o nounset -o errexit
 
-CONFIG_FILE="${1:-/home/klawren/oak/gtex/config/ld_gtex_eur.sh}"
+CONFIG_FILE="${1:-/home/klawren/oak/gtex/config/04_ld_gtex_eur.sh}"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 # Determine output path: prefer OUTPUT_TSV; else derive from out_dir
@@ -28,10 +28,9 @@ padded_ld_blocks_path="${out_dir%/}/padded_ld_blocks.tsv"
 awk -v dir="$out_dir" 'BEGIN{
   OFS = "\t";
 }
-NR==1{
+BEGIN{
   # Print standardized header
   print "chrom","start","end","path";
-  next;
 }
 {
   chr_raw = $1;

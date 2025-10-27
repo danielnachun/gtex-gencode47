@@ -119,16 +119,17 @@ mkdir -p "${output_dir}"
 
 echo $(date +"[%b %d %H:%M:%S] Running colocboost on LD region ${ld_region} in tissue ${tissue_id} on the gene bed list ${gene_bed_list}")
 
-# Check that at least one analysis mode is specified
-if [ "${run_xqtl_only}" != "TRUE" ] && [ "${run_xqtl_only}" != "true" ] && \
-   [ "${run_separate_gwas}" != "TRUE" ] && [ "${run_separate_gwas}" != "true" ] && \
-   [ "${run_joint_gwas}" != "TRUE" ] && [ "${run_joint_gwas}" != "true" ]; then
-    echo "Error: At least one analysis mode must be specified (run_xqtl_only, run_separate_gwas, or run_joint_gwas)"
-    exit 1
+# Determine which R script to call based on analysis mode
+if [ "${run_xqtl_only}" = "TRUE" ] || [ "${run_xqtl_only}" = "true" ] || [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] || [ "${run_joint_gwas}" = "TRUE" ] || [ "${run_joint_gwas}" = "true" ]; then
+    # Use unified compare script for QTL and GWAS analyses
+    r_script="${code_dir}/colocboost.compare.R"
+else
+    # Default to basic colocboost
+    r_script="${code_dir}/colocboost.R"
 fi
 
 # Build the R script command
-r_command="${code_dir}/colocboost_compare.R \
+r_command="${r_script} \
     --tissue_id ${tissue_id} \
     --gene_region ${gene_region} \
     --variant_region ${association_region} \

@@ -21,8 +21,10 @@ if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
     bams_to_realign=$(sed "s|^|${bam_dir}/|" <<< "$full_bam_list")
 else
-    # only realign a bam if the v11 genome bam does not already exist
-    bams_to_realign=$(grep -v -F -f <(find "${output_dir}/genome_bam/" -name "*.v11md.bam" -exec basename {} \; | sed 's|\.v11md\.bam$|.md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
+    # only realign a bam if the completion marker file does not already exist
+    completion_dir="${output_dir}/completed/realign"
+    all_completion_files=$(printf "%s\n" ${full_bam_list} | sed "s|^|${completion_dir}/|;s|\.md\.bam$|.completed|")
+    bams_to_realign=$(printf "%s\n" ${full_bam_list} | paste - <(printf "%s\n" ${all_completion_files}) | awk '{if(system("[ -f \""$2"\" ]")==0) next; print $1}' | sed "s|^|${bam_dir}/|")
 fi
 
 # Check if bams_to_realign is empty

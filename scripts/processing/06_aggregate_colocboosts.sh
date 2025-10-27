@@ -25,6 +25,7 @@ options_array=(
     coloc_base_dir
     code_dir
     regenerate
+    skip_robust
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -32,6 +33,7 @@ arguments=$(getopt --options a --longoptions "${longoptions}" --name 'aggregate_
 eval set -- "${arguments}"
 
 regenerate="false"
+skip_robust="false"
 
 while true; do
     case "${1}" in
@@ -43,6 +45,8 @@ while true; do
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --regenerate )
             regenerate="${2}"; shift 2 ;;
+        --skip_robust )
+            skip_robust="${2}"; shift 2 ;;
         -- ) 
             shift; break ;;
         * ) 
@@ -67,7 +71,10 @@ mkdir -p "${coloc_base_dir}/format_file_list"
 tmpfile="${coloc_base_dir}/format_file_list/${tissue_id}.${SLURM_ARRAY_TASK_ID}.file_list.tmp"
 count=0
 
-if [[ "${regenerate}" == "true" ]]; then
+if [[ "${skip_robust}" == "true" ]]; then
+    echo "Skipping robust file processing. Proceeding directly to aggregation."
+    rm -f "$tmpfile"
+elif [[ "${regenerate}" == "true" ]]; then
     # Regenerate: process all .colocboost.rds files, regardless of .txt files
     find "${coloc_dir}" -type f -name '*colocboost.rds' > "$tmpfile"
     total_to_process=$(wc -l < "$tmpfile")

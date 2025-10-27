@@ -98,3 +98,10 @@ bash ${code_dir}/run_rnaseqc.sh \
 
 mkdir -p ${output_dir}/rnaseq_qc/
 rsync -Prhltv ${dir_prefix}/output/rnaseq_qc/* ${output_dir}/rnaseq_qc/
+
+# Create completion marker
+completion_dir="${output_dir}/completed/rnaseqc_null"
+mkdir -p "${completion_dir}"
+completion_file="${completion_dir}/${sample_id}.completed"
+echo "Processing completed successfully for sample: ${sample_id}" > "${completion_file}"
+echo "Completion marker created: ${completion_file}"
