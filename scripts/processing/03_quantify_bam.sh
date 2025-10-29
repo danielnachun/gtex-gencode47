@@ -103,7 +103,7 @@ rsync -PrhLtv ${bam_file} ${dir_prefix}/references/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 
 # run rnaseq qc
-bash ${code_dir}/run_rnaseqc.sh \
+bash ${code_dir}/run_03_rnaseqc.sh \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --genes_gtf ${local_reference_dir}/${genes_gtf} \
     --genome_fasta ${local_reference_dir}/${reference_fasta} \
@@ -115,7 +115,7 @@ bash ${code_dir}/run_rnaseqc.sh \
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run coverage
-bash ${code_dir}/run_bam_to_coverage.sh \
+bash ${code_dir}/run_03_bam_to_coverage.sh \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --chr_sizes ${local_reference_dir}/${chr_sizes} \
     --sample_id ${sample_id} \
@@ -139,7 +139,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
     # run gatk ase
-    bash ${code_dir}/run_gatk_ase.sh \
+    bash ${code_dir}/run_03_gatk_ase.sh \
         --sample_id ${sample_id} \
         --dir_prefix ${dir_prefix} \
         --genome_fasta ${local_reference_dir}/${reference_fasta} \
@@ -154,7 +154,7 @@ fi
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run regtools
-bash ${code_dir}/run_regtools.sh \
+bash ${code_dir}/run_03_regtools.sh \
     --sample_id ${sample_id} \
     --dir_prefix ${dir_prefix} \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
@@ -164,7 +164,7 @@ bash ${code_dir}/run_regtools.sh \
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run fraser quantification
-bash ${code_dir}/run_fraser.sh \
+bash ${code_dir}/run_03_fraser.sh \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/fraser \
@@ -175,7 +175,7 @@ bash ${code_dir}/run_fraser.sh \
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run ipafinder
-bash ${code_dir}/run_ipafinder.sh \
+bash ${code_dir}/run_03_ipafinder.sh \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --ipa_annotation ${local_reference_dir}/${ipa_annotation} \

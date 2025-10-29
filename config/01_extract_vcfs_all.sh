@@ -7,3 +7,8 @@ num_parallel=1
 max_array_size=1000
 job_time=4:00:00
 job_mem=64G
+submit_on=sherlock
+regenerate_all=false
+
+# File processing configuration
+file_type=participants

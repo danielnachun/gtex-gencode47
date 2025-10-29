@@ -78,7 +78,7 @@ if [[ ${regenerate} = false ]] && [[ -f ${out_file} ]]; then
     echo $(date +"[%b %d %H:%M:%S] LD file ${out_file} already exists, skipping")
 else
     echo $(date +"[%b %d %H:%M:%S] Running PLINK LD for chr${chr_id}:${from_bp}-${to_bp}")
-    ${code_dir}/run_plink_ld.sh \
+    ${code_dir}/run_04_plink_ld.sh \
         --genotype_prefix "$genotype_prefix" \
         --sample_ids "$sample_ids" \
         --chr_id "$chr_id" \

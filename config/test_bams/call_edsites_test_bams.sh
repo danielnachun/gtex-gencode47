@@ -12,6 +12,5 @@ code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 full_vcf_file=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references/GTEx_Analysis_2021-02-11_v9_WholeGenomeSeq_953Indiv.SHAPEIT2_phased.vcf.gz
 regenerate_all=true
-batch_size=1
 max_array_size=1000
 submit_on=sherlock

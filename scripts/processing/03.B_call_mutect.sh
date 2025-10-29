@@ -171,7 +171,7 @@ echo $(date +"[%b %d %H:%M:%S] ran mutect for ${sample_id}")
 #     rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
 #     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
-#     bash ${code_dir}/run_mutect.sh \
+#     bash ${code_dir}/run_03B_mutect.sh \
 #         --bqsr_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
 #         --sample_id ${sample_id} \
 #         --reference_fasta ${local_reference_dir}/${reference_fasta} \
@@ -182,7 +182,7 @@ echo $(date +"[%b %d %H:%M:%S] ran mutect for ${sample_id}")
 
 # else
 #     echo "Warning: VCF files not found, running MUTECT with PON from all participant combined VCF ..."
-#     bash ${code_dir}/run_mutect.sh \
+#     bash ${code_dir}/run_03B_mutect.sh \
 #         --bqsr_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
 #         --sample_id ${sample_id} \
 #         --reference_fasta ${local_reference_dir}/${reference_fasta} \
@@ -195,7 +195,7 @@ echo $(date +"[%b %d %H:%M:%S] ran mutect for ${sample_id}")
 
 # run SplitNCigarReads
 # 2 hour run time
-bash ${code_dir}/run_split_reads.sh \
+bash ${code_dir}/run_03B_split_reads.sh \
     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
@@ -204,7 +204,7 @@ bash ${code_dir}/run_split_reads.sh \
 # run bqsr
 # 1 hour 15 minute run time
 # then 22 minute run time
-bash ${code_dir}/run_bqsr.sh \
+bash ${code_dir}/run_03B_bqsr.sh \
     --split_bam ${dir_prefix}/tmp/split_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.split.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
@@ -228,7 +228,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
     rsync -PrhLtv ${vcf_dir}/${vcf_file} ${vcf_dir_tmp}
     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
-    bash ${code_dir}/run_mutect.sh \
+    bash ${code_dir}/run_03B_mutect.sh \
         --bqsr_bam ${dir_prefix}/output/bqsr/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
         --sample_id ${sample_id} \
         --reference_fasta ${local_reference_dir}/${reference_fasta} \
@@ -239,7 +239,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
 
 else
     echo "Warning: VCF files not found, running MUTECT with PON from all participant combined VCF ..."
-    bash ${code_dir}/run_mutect.sh \
+    bash ${code_dir}/run_03B_mutect.sh \
         --bqsr_bam ${dir_prefix}/output/bqsr/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.recalibrated.bam \
         --sample_id ${sample_id} \
         --reference_fasta ${local_reference_dir}/${reference_fasta} \

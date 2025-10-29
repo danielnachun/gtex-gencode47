@@ -93,7 +93,7 @@ bash ${code_dir}/run_sprint_get_unaligned_bam.sh \
     --tmp_dir ${dir_prefix}/tmp/unaligned_bam
 
 # process unaligned bams to fastqs
-bash ${code_dir}/run_bam_to_fastq.sh \
+bash ${code_dir}/run_02_bam_to_fastq.sh \
     --bam_file ${dir_prefix}/tmp/unaligned_bam/${sample_id}.unaligned.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \

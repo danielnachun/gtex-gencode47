@@ -98,7 +98,7 @@ bash ${code_dir}/run_get_unaligned_bam.sh \
     --tmp_dir ${dir_prefix}/tmp/unaligned_bam
 
 # process unaligned bams to fastqs
-bash ${code_dir}/run_bam_to_fastq.sh \
+bash ${code_dir}/run_02_bam_to_fastq.sh \
     --bam_file ${dir_prefix}/tmp/unaligned_bam/${sample_id}.unaligned.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
@@ -106,7 +106,7 @@ bash ${code_dir}/run_bam_to_fastq.sh \
 
 # do we get different resutls if we run on all reads (i.e. not just unaligned reads)?
 # process all bam reads to fastqs
-bash ${code_dir}/run_bam_to_fastq.sh \
+bash ${code_dir}/run_02_bam_to_fastq.sh \
     --bam_file ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \

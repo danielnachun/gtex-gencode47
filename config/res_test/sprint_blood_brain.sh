@@ -7,6 +7,5 @@ repeat_bed=hg38_repeat.bed
 output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/res_test
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 regenerate_all=true
-batch_size=16
 max_array_size=1000
 submit_on=scg

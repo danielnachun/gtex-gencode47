@@ -14,3 +14,10 @@ num_parallel=16
 max_array_size=1000
 job_time=6:00:00
 job_mem=64G
+submit_on=sherlock
+
+# File processing configuration
+file_type=bam_files
+input_dir=${realign_bam_dir}
+file_pattern=${bam_file_end}$
+completion_subdir=rnaseqc_null

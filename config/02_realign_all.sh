@@ -9,6 +9,5 @@ output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissue
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 regenerate_all=false
 # step limited by RAM availible on most sherlock nodes (~64G/bam needed)
-batch_size=1
 max_array_size=1000
 submit_on=scg

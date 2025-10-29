@@ -53,7 +53,7 @@ echo "Processing all files with ${num_parallel} parallel jobs"
 cat "${file_list}" | parallel -j"${num_parallel}" --ungroup --verbose \
     "${processing_script}" \
     "$@" \
-    --file {}
+    --bam_file {}
 
 echo "Batch finished"
 

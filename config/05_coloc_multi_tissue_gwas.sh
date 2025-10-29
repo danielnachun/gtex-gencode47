@@ -15,19 +15,25 @@ association_padding=0
 output_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/coloc"
 code_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing"
 regenerate_all=FALSE
+
+# submission params
 num_parallel=1
 max_array_size=1000
 job_time=24:00:00
 job_mem=512G
 job_cpus=1
-submit_on=sherlock
-# Analysis mode flags
+submit_on=scg
+
+strong_only=TRUE
+p_threshold=1e-6
+
+# coloc mode flags
 multi_tissue=TRUE
-run_v39=FALSE
-run_individual=FALSE
+run_v39=TRUE
+run_individual=TRUE
 run_xqtl_only=FALSE
-run_separate_gwas=TRUE
-run_joint_gwas=FALSE
+run_separate_gwas=FALSE
+run_joint_gwas=TRUE
 
 # GWAS-specific parameters
 gwas_params="--gwas_id_list ${gwas_id_list} --gwas_dir ${gwas_dir} --gwas_meta ${gwas_meta} --ld_meta ${ld_meta} --gwas_column_matching ${gwas_column_matching}"

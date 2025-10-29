@@ -12,3 +12,6 @@ job_mem=128G
 submit_on=scg
 regenerate=false
 skip_robust=true
+
+# File processing configuration
+file_type=tissues

@@ -92,7 +92,7 @@ rsync -PrhLtv ${bam_file} ${dir_prefix}/raw
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/raw
 
 # process bams to fastqs
-bash ${code_dir}/run_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+bash ${code_dir}/run_02_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq
@@ -112,7 +112,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
     # align with star
-    bash ${code_dir}/run_star.sh \
+    bash ${code_dir}/run_02_star.sh \
         --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
@@ -122,7 +122,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
 else
     echo "Warning: VCF files not found, running STAR without WASP..."
     # align with star
-    bash ${code_dir}/run_star_no_vcf.sh \
+    bash ${code_dir}/run_02_star_no_vcf.sh \
         --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
@@ -131,7 +131,7 @@ else
 fi
 
 # # sync bams
-# bash ${code_dir}/run_bam_sync.sh \
+# bash ${code_dir}/run_02_bam_sync.sh \
 #     --initial_bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
 #     --star_aligned_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.sortedByCoord.out.bam \
 #     --sample_id ${sample_id} \
@@ -139,13 +139,13 @@ fi
 #     --output_dir ${dir_prefix}/output/flagstat
 
 # # mark duplicates, get the genome bam that we save
-# bash ${code_dir}/run_mark_duplicates.sh \
+# bash ${code_dir}/run_02_mark_duplicates.sh \
 #     --genome_bam_file ${dir_prefix}/tmp/bamsync/${sample_id}.Aligned.sortedByCoord.out.patched.bam \
 #     --output_prefix ${sample_id}.Aligned.sortedByCoord.out.patched.v11md \
 #     --output_dir ${dir_prefix}/output/genome_bam
 
 # run rsem, save isoform quantification
-bash ${code_dir}/run_rsem.sh \
+bash ${code_dir}/run_02_rsem.sh \
     --rsem_ref_dir ${local_reference_dir}/${rsem_ref_dir} \
     --transcriptome_bam ${dir_prefix}/tmp/star/${sample_id}.Aligned.toTranscriptome.out.bam \
     --sample_id ${sample_id} \

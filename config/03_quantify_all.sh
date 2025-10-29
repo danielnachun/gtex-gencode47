@@ -16,3 +16,9 @@ max_array_size=1000
 job_time=40:00:00
 job_mem=256G
 submit_on=sherlock
+
+# File processing configuration
+file_type=bam_files
+input_dir=${realign_bam_dir}
+file_pattern=Aligned.sortedByCoord.out.patched.v11md.bam$
+completion_subdir=quantifications

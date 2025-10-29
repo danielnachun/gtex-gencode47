@@ -23,3 +23,6 @@ run_single_gene=FALSE
 run_v39_genes=FALSE
 strong_only=TRUE
 p_threshold=5e-8
+
+# File processing configuration
+file_type=ld_regions_string

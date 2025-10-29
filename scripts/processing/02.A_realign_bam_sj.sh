@@ -88,7 +88,7 @@ rsync -PrhLtv ${bam_file} ${dir_prefix}/raw
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/raw
 
 # process bams to fastqs
-bash ${code_dir}/run_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+bash ${code_dir}/run_02_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq
@@ -108,7 +108,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
     rsync -PrhLtv ${vcf_dir}/${vcf_file}.tbi ${vcf_dir_tmp}
 
     # align with star
-    bash ${code_dir}/run_star.sh \
+    bash ${code_dir}/run_02_star.sh \
         --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \
@@ -118,7 +118,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
 else
     echo "Warning: VCF files not found, running STAR without WASP..."
     # align with star
-    bash ${code_dir}/run_star_no_vcf.sh \
+    bash ${code_dir}/run_02_star_no_vcf.sh \
         --star_index ${local_reference_dir}/${star_index} \
         --fastq_1 ${dir_prefix}/tmp/fastq/${sample_id}_1.fastq.gz \
         --fastq_2 ${dir_prefix}/tmp/fastq/${sample_id}_2.fastq.gz \

@@ -208,7 +208,7 @@ process_colocboost() {
         echo "Running colocboost aggregated on LD region ${ld_region} across all tissues"
         
         # Build base command
-        local cmd="${code_dir}/run_colocboost_compare.sh \
+        local cmd="${code_dir}/run_05_colocboost_compare.sh \
             --tissue_id \"all_tissues\" \
             --ld_region \"${ld_region}\" \
             --association_region \"${ld_region}\" \
@@ -264,7 +264,7 @@ process_colocboost() {
             echo "Running colocboost on LD region ${ld_region} in tissue ${tissue_id}"
             
             # Build base command
-            local cmd="${code_dir}/run_colocboost_compare.sh \
+            local cmd="${code_dir}/run_05_colocboost_compare.sh \
                 --tissue_id \"${tissue_id}\" \
                 --ld_region \"${ld_region}\" \
                 --association_region \"${ld_region}\" \

@@ -88,7 +88,7 @@ elif [[ "${regenerate}" == "true" ]]; then
     fi
 
     echo "Processing files in parallel (regenerate mode)..."
-    parallel --jobs "${num_parallel}" "${code_dir}/run_format_colocboost.sh" --file {} --code_dir "${code_dir}" :::: "$tmpfile"
+    parallel --jobs "${num_parallel}" "${code_dir}/run_06_format_colocboost.sh" --file {} --code_dir "${code_dir}" :::: "$tmpfile"
 
     count=$(find "${coloc_dir}" -type f -name '*.txt' | wc -l)
     echo "Done. Processed $count files."
@@ -129,7 +129,7 @@ else
         fi
 
         echo "Processing files in parallel..."
-        parallel --jobs "${num_parallel}" "${code_dir}/run_format_colocboost.sh" --file {} --code_dir "${code_dir}" :::: "$tmpfile"
+        parallel --jobs "${num_parallel}" "${code_dir}/run_06_format_colocboost.sh" --file {} --code_dir "${code_dir}" :::: "$tmpfile"
 
         # Count only robust outputs for reporting
         count=$(find "${coloc_dir}" -type f -name '*.xqtl_coloc.robust.txt' | wc -l)
@@ -144,5 +144,5 @@ fi
 
 # Aggregate outputs via wrapper
 
-"${code_dir}/run_combine_colocboost.sh" --tissue_id "${tissue_id}" --coloc_output_dir "${coloc_dir}" --code_dir "${code_dir}" --aggregated_output_dir "${coloc_base_dir}"
+"${code_dir}/run_06_combine_colocboost.sh" --tissue_id "${tissue_id}" --coloc_output_dir "${coloc_dir}" --code_dir "${code_dir}" --aggregated_output_dir "${coloc_base_dir}"
 echo "Aggregation complete."

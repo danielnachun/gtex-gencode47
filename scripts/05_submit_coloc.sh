@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o xtrace -o nounset -o errexit
+set -o nounset -o errexit
 
 # Unified submission script for all co-localization analyses
 # Usage: 05_submit_coloc.sh <config_file>
@@ -8,21 +8,6 @@ set -o xtrace -o nounset -o errexit
 # Source config file
 CONFIG_FILE="${1:-/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/05_coloc_all.sh}"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
-
-# Define function to get LD regions to process
-get_files_to_process() {
-    # Extract all LD regions from the BED file (skip header), convert to 1-based region string
-    ld_regions=$(awk 'NR>1 {printf "%s:%d-%d\n", $1, $2+1, $3}' "${ld_region_list}")
-    total_count=$(wc -l < "${ld_region_list}")
-    
-    if [ "${regenerate_all:-FALSE}" = "TRUE" ] || [ "${regenerate_all:-FALSE}" = "true" ]; then
-        echo "$ld_regions"
-    else
-        # only coloc a block if the completion marker file does not already exist
-        all_completion_files=$(printf "%s\n" ${ld_regions} | sed "s|^|${completion_dir}/|;s|\$|.completed|")
-        printf "%s\n" ${ld_regions} | paste - <(printf "%s\n" ${all_completion_files}) | awk '{if(system("[ -f \""$2"\" ]")==0) next; print $1}'
-    fi
-}
 
 # Determine output directory based on boolean flags
 if [ "${multi_tissue:-FALSE}" = "TRUE" ] || [ "${multi_tissue:-FALSE}" = "true" ]; then

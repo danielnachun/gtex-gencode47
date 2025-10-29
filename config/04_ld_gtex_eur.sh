@@ -10,3 +10,7 @@ max_array_size=999
 job_time=0:15:00
 job_mem=4G
 submit_on=scg
+
+# File processing configuration
+file_type=ld_regions
+output_dir=${out_dir}
