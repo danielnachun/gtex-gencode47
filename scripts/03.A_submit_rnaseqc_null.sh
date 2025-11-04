@@ -32,5 +32,5 @@ exec "${code_dir}/utils/submit_batch_jobs.sh" \
     --output_dir "${output_dir}" \
     --code_dir "${code_dir}" \
     --genes_gtf "${genes_gtf}" \
-    "${extra_args[@]}" \
+    ${extra_args[@]+"${extra_args[@]}"} \
     --bam_file_end "${bam_file_end}"
