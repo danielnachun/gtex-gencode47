@@ -5,10 +5,10 @@ module load bedtools
 set -o xtrace -o nounset -o pipefail -o errexit
 
 # Input parameters
-GENE_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v39.genes.gtf"
-ALL_GTF="/home/klawren/oak/gtex/data/realign_references/gencode.v39.annotation.gtf"
-CHROM_SIZES="/home/klawren/oak/gtex/data/realign_references/GRCh38.chrsizes"
-TMP_DIR="/home/klawren/oak/gtex/data/other_references/nongenic_null_v10"
+GENE_GTF="/oak/stanford/groups/smontgom/dnachun/data/dgtex/dGTEx_Consortium_resources/NHP-dGTEx_references/Enhanced_GTFs/Marmosets/v1/Marmoset_mCalJa1.2.pat.X_enhanced_v1_genes_collapsed_stranded.gtf"
+ALL_GTF="/oak/stanford/groups/smontgom/dnachun/data/dgtex/dGTEx_Consortium_resources/NHP-dGTEx_references/Enhanced_GTFs/Marmosets/v1/Marmoset_mCalJa1.2.pat.X_enhanced_v1.gtf"
+CHROM_SIZES="/oak/stanford/groups/smontgom/dnachun/data/dgtex/dGTEx_Consortium_resources/NHP-dGTEx_references/FASTA_files/Marmosets/GCA_011100555.2_mCalJa1.2.pat.X_chrM_ucsc_chrs.chrsizes"
+TMP_DIR="/oak/stanford/groups/smontgom/klawren/nph_gtex/data/tmp/marmoset"
 
 # pull out all exons
 awk -v OFS='\t' '$3=="exon" {

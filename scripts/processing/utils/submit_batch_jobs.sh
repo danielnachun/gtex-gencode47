@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Shared utility for submitting batch jobs with parallel/series processing
-# Usage: submit_batch_jobs.sh <config_file> <batch_script> <job_name> [additional_params...]
+# Usage: submit_batch_jobs.sh <config_file> <batch_script> <job_name> [processing_script] [additional_params...]
 
 set -o xtrace -o nounset -o errexit
 
@@ -13,6 +13,14 @@ shift 3  # Remove first 3 arguments, rest are additional parameters
 
 # Source the config file
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
+
+# Determine the processing script from the first additional parameter; require it to be provided
+if [[ $# -lt 1 ]]; then
+    echo "Error: processing_script not provided. Usage: submit_batch_jobs.sh <config_file> <batch_script> <job_name> <processing_script> [additional_params...]"
+    exit 1
+fi
+PROCESSING_SCRIPT="${1}"
+shift 1  # Shift off processing script, leaving only its parameters in "$@"
 
 # General get_files_to_process function based on file_type
 get_files_to_process() {
@@ -227,8 +235,8 @@ sbatch_params=(
     "${BATCH_SCRIPT}"
     "${file_list_paths}"
     "${num_parallel}"
-    "${code_dir}/02.A_realign_bam_sj.sh"
-    "$@"  # Pass through additional parameters
+    "${PROCESSING_SCRIPT}"
+    "$@"  # Pass through additional parameters for the processing script
 )
 
 # Add any additional SLURM parameters from config

@@ -36,6 +36,10 @@ longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 arguments=$(getopt --options a --longoptions "${longoptions}" --name 'fastq_to_star' -- "$@")
 eval set -- "${arguments}"
 
+# Initialize optional variables
+intervals_bed=${intervals_bed-}
+genome_fasta=${genome_fasta-}
+
 while true; do
     case "${1}" in
         --duplicate_marked_bam )
@@ -58,17 +62,30 @@ while true; do
     esac
 done
 
-mkdir -p ${output_dir}
-echo $(date +"[%b %d %H:%M:%S] Generating QC for ${sample_id}")
+mkdir -p "${output_dir}"
+date_str=$(date '+[%b %d %H:%M:%S]')
+echo "${date_str} Generating QC for ${sample_id}"
 # run RNA-SeQC
-rnaseqc \
-    ${genes_gtf} \
-    ${duplicate_marked_bam} \
-    ${output_dir} \
-    -s ${sample_id} \
-    --bed ${intervals_bed} \
-    --fasta ${genome_fasta} \
+rnaseqc_args=(
+    "${genes_gtf}"
+    "${duplicate_marked_bam}"
+    "${output_dir}"
+    -s "${sample_id}"
     -vv
+)
+if [[ -n "${genome_fasta:-}" ]]; then
+    rnaseqc_args+=(--fasta "${genome_fasta}")
+fi
+if [[ -n "${intervals_bed:-}" ]]; then
+    rnaseqc_args+=(--bed "${intervals_bed}")
+fi
+rnaseqc "${rnaseqc_args[@]}"
 
-gzip ${output_dir}/*.gct
-echo $(date +"[%b %d %H:%M:%S] Done")
+shopt -s nullglob
+mapfile -t gct_files < <(printf '%s\n' "${output_dir}"/*.gct)
+if (( ${#gct_files[@]} )); then
+    gzip "${gct_files[@]}"
+fi
+
+date_str=$(date '+[%b %d %H:%M:%S]')
+echo "${date_str} Done"

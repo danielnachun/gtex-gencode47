@@ -42,6 +42,11 @@ longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
 arguments=$(getopt --options a --longoptions "${longoptions}" --name 'bam_process' -- "$@")
 eval set -- "${arguments}"
 
+# Initialize optional vars to avoid nounset when not provided
+intervals_bed=${intervals_bed-}
+reference_fasta=${reference_fasta-}
+chr_sizes=${chr_sizes-}
+
 while true; do
     case "${1}" in
         --local_reference_dir )
@@ -71,7 +76,7 @@ while true; do
 done
 
 # activate the pixi enviroment
-source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml
+source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)
 
 # get sample id from file name
 sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))
@@ -87,14 +92,22 @@ mkdir -p ${dir_prefix}/tmp
 rsync -PrhLtv ${bam_file} ${dir_prefix}/output/genome_bam
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/output/genome_bam
 
-# run rnaseq qc
-bash ${code_dir}/run_03_rnaseqc.sh \
-    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.${bam_file_end} \
-    --genes_gtf ${local_reference_dir}/${genes_gtf} \
-    --genome_fasta ${local_reference_dir}/${reference_fasta} \
-    --intervals_bed ${local_reference_dir}/${intervals_bed} \
-    --sample_id ${sample_id} \
+# Build rnaseqc args
+rnaseqc_args=(
+    --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.${bam_file_end}
+    --genes_gtf ${local_reference_dir}/${genes_gtf}
+    --sample_id ${sample_id}
     --output_dir ${dir_prefix}/output/rnaseq_qc
+)
+if [[ -n "${reference_fasta:-}" ]]; then
+    rnaseqc_args+=(--genome_fasta ${local_reference_dir}/${reference_fasta})
+fi
+if [[ -n "${intervals_bed:-}" ]]; then
+    rnaseqc_args+=(--intervals_bed ${local_reference_dir}/${intervals_bed})
+fi
+
+# run rnaseq qc
+bash ${code_dir}/run_03_rnaseqc.sh "${rnaseqc_args[@]}"
 
 mkdir -p ${output_dir}/rnaseq_qc/
 rsync -Prhltv ${dir_prefix}/output/rnaseq_qc/* ${output_dir}/rnaseq_qc/

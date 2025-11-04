@@ -26,7 +26,12 @@ parser <- argparser::arg_parser("Script to run colocboost") |>
     argparser::add_argument("--imiss_cutoff", help = "Missingness cutoff", default = 0) |>
     argparser::add_argument("--run_single_gene", help = "Run single gene analysis", default = FALSE) |>
     argparser::add_argument("--run_v39_genes", help = "Run v39 genes analysis", default = FALSE) |>
-    argparser::add_argument("--v39_gene_id_path", help = "Path to list of v39 gene IDs, one per line", default = NULL)
+    argparser::add_argument("--v39_gene_id_path", help = "Path to list of v39 gene IDs, one per line", default = NULL) |>
+    # New analysis mode flags (aliases)
+    argparser::add_argument("--run_xqtl", help = "Enable xQTL coloc analysis", default = FALSE) |>
+    argparser::add_argument("--run_separate_gwas", help = "Enable separate GWAS analysis", default = FALSE) |>
+    argparser::add_argument("--run_seperate_gwas", help = "Alias for --run_separate_gwas", default = FALSE) |>
+    argparser::add_argument("--run_join_gwas", help = "Alias for --run_joint_gwas", default = FALSE)
 
 parsed_args <- argparser::parse_args(parser)
 
@@ -73,6 +78,11 @@ run_single_gene   <- parsed_args$run_single_gene
 run_v39_genes     <- parsed_args$run_v39_genes
 v39_gene_id_path  <- parsed_args$v39_gene_id_path
 
+# New derived analysis flags from aliases
+run_xqtl           <- isTRUE(parsed_args$run_xqtl)
+run_separate_gwas  <- isTRUE(parsed_args$run_separate_gwas) || isTRUE(parsed_args$run_seperate_gwas)
+run_joint_gwas     <- isTRUE(parsed_args$run_join_gwas) # alias only; no primary flag existed in this version
+
 # Read v39 gene IDs from file if path is provided
 if (!is.null(v39_gene_id_path)) {
     v39_gene_id_list <- readLines(v39_gene_id_path)
@@ -107,6 +117,9 @@ cat("  imiss_cutoff:", imiss_cutoff, "\n")
 cat("  run_single_gene:", run_single_gene, "\n")
 cat("  run_v39_genes:", run_v39_genes, "\n")
 cat("  v39_gene_id_path:", v39_gene_id_path, "\n")
+cat("  run_xqtl:", run_xqtl, "\n")
+cat("  run_separate_gwas:", run_separate_gwas, "\n")
+cat("  run_joint_gwas:", run_joint_gwas, "\n")
 
 
 cat("\nLoading required libraries...\n")
@@ -189,9 +202,9 @@ if (file.exists(sumstat_data_path)) {
             rep(covariate_path, length(phenotype_list))
         },
         conditions_list_individual = gene_names,
-        maf_cutoff = maf_cutoff,
-        mac_cutoff = mac_cutoff,
-        xvar_cutoff = xvar_cutoff,
+    maf_cutoff = maf_cutoff,
+    mac_cutoff = mac_cutoff,
+    xvar_cutoff = xvar_cutoff,
         imiss_cutoff = imiss_cutoff,
         association_window = variant_region
     )
@@ -202,7 +215,7 @@ if (file.exists(sumstat_data_path)) {
     region_data <- load_multitask_regional_data(
         region = gene_region,
         genotype_list = c(genotype_stem),
-        phenotype_list = phenotype_list,
+    phenotype_list = phenotype_list,
         covariate_list = if (!is.null(covariate_list_path)) {
             cl <- readLines(covariate_list_path)
             if (length(cl) != length(phenotype_list)) {
@@ -251,9 +264,9 @@ res <- colocboost_analysis_pipeline(
     pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
     qc_method = c("rss_qc"), 
     maf_cutoff=maf_cutoff, 
-    xqtl_coloc = FALSE,
-    joint_gwas = TRUE,
-    separate_gwas = FALSE
+    xqtl_coloc = run_xqtl,
+    joint_gwas = run_joint_gwas,
+    separate_gwas = run_separate_gwas
 )
 analysis_end_time <- Sys.time()
 cat("Colocboost on all genes completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
@@ -324,9 +337,9 @@ if (run_single_gene) {
             pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
             qc_method = c("rss_qc"), 
             maf_cutoff=maf_cutoff, 
-            xqtl_coloc = FALSE,
-            joint_gwas = FALSE,
-            separate_gwas = TRUE
+            xqtl_coloc = run_xqtl,
+            joint_gwas = run_joint_gwas,
+            separate_gwas = run_separate_gwas
         )
         analysis_end_time <- Sys.time()
         
@@ -362,7 +375,7 @@ if (run_v39_genes) {
     if (!any(keep_idx)) {
         cat("  No genes from v39_gene_id_list found in phenotype_list (after core ID matching)\n")
         cat("  Skipping v39 gene analysis\n")
-    } else {
+} else {
         gene_names_v39 <- all_gene_names[keep_idx]
         cat("  v39 genes matched:", paste(gene_names_v39, collapse = ", "), "\n")
 
@@ -395,9 +408,9 @@ if (run_v39_genes) {
             pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
             qc_method = c("rss_qc"), 
             maf_cutoff=maf_cutoff, 
-            xqtl_coloc = FALSE,
-            joint_gwas = TRUE,
-            separate_gwas = FALSE
+            xqtl_coloc = run_xqtl,
+            joint_gwas = run_joint_gwas,
+            separate_gwas = run_separate_gwas
         )
         analysis_end_time_v39 <- Sys.time()
         cat("Colocboost on v39 genes completed in:", round(difftime(analysis_end_time_v39, analysis_start_time_v39, units = "mins"), 2), "minutes\n")

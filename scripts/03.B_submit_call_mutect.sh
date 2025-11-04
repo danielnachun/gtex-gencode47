@@ -3,7 +3,11 @@
 set -o nounset -o errexit
 
 # Source the config file
-CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/03.B_call_mutect_all_tissues.sh"
+CONFIG_FILE="${1:-}"
+if [[ -z "${CONFIG_FILE}" ]]; then
+    echo "Usage: $(basename "$0") <config_file>"
+    exit 1
+fi
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 # Call the shared batch submission utility

@@ -11,10 +11,11 @@ data/*
 trash/*
 output/*
 
-gencode_caudate_collaberation/*
+collabs/*
 
 scripts/upload/*
 scripts/analysis/*
 pecotmr
 
 .vscode/*
+*.png

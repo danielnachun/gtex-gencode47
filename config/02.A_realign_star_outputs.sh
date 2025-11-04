@@ -10,7 +10,7 @@ regenerate_all=false
 num_parallel=1
 max_array_size=1000
 job_time=48:00:00
-job_mem=128G
+job_mem=256G
 submit_on=sherlock
 
 # File processing configuration
