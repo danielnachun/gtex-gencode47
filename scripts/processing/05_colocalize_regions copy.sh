@@ -4,9 +4,7 @@
 # Usage: 05_colocalize_regions.sh [parameters...]
 
 # Set bash options for verbose output and to fail immediately on errors or if variables are undefined.
-set -o xtrace -o nounset -o pipefail -o errexit
-
-# Note: tabix will be loaded via pixi environment activation below
+set -o nounset -o pipefail -o errexit
 
 # Helper functions
 check_for_file() {
@@ -30,7 +28,6 @@ check_for_directory() {
 # Define all possible parameters
 options_array=(
     ld_region_list
-    ld_region
     tissue_id_list
     genotype_stem
     covariate_dir
@@ -65,8 +62,7 @@ eval set -- "${arguments}"
 
 while true; do
     case "${1}" in
-        --ld_region_list ) ld_region_list="${2}"; if [ "${2}" != "none" ]; then check_for_file "${1}" "${2}"; fi; shift 2 ;;
-        --ld_region ) ld_region="${2}"; shift 2 ;;
+        --ld_region_list ) ld_region_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --tissue_id_list ) tissue_id_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --genotype_stem ) genotype_stem="${2}"; shift 2 ;;
         --covariate_dir ) covariate_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
@@ -108,30 +104,12 @@ run_joint_gwas=${run_joint_gwas:-FALSE}
 strong_only=${strong_only:-FALSE}
 p_threshold=${p_threshold:-5e-8}
 
-# Activate pixi environment to get tabix and other tools
-if [ -n "${code_dir:-}" ] && command -v pixi &> /dev/null; then
-    source <(pixi shell-hook --environment pecotmr --manifest-path "${code_dir}/pixi.toml" 2>/dev/null) || true
-fi
+# Get SLURM array task ID
+line_number="${SLURM_ARRAY_TASK_ID}"
+ld_region="$(sed "${line_number}q; d" "${ld_region_list}")"
 
-# Get LD region - either from parameter or from ld_region_list using SLURM_ARRAY_TASK_ID
-if [ -n "${ld_region:-}" ]; then
-    # Use provided ld_region parameter
-    echo "Using provided ld_region: ${ld_region}"
-    # Create a unique identifier for working directory from the region string
-    # Use a hash to ensure uniqueness even with parallel execution
-    line_number=$(echo "${ld_region}" | md5sum | cut -d' ' -f1 | head -c 16)
-else
-    # Get from ld_region_list using SLURM array task ID
-    if [ -z "${ld_region_list:-}" ] || [ "${ld_region_list}" = "none" ]; then
-        echo "Error: Must provide either --ld_region or --ld_region_list"
-        exit 1
-    fi
-    line_number="${SLURM_ARRAY_TASK_ID}"
-    ld_region="$(sed "${line_number}q; d" "${ld_region_list}")"
-fi
-
-# Create working directory with unique name to avoid conflicts in parallel execution
-working_dir="${TMPDIR}/coloc_${line_number}_$$"
+# Create working directory
+working_dir="${TMPDIR}/coloc_${line_number}"
 mkdir -p "${working_dir}"
 
 # GWAS filtering logic (if running GWAS analysis)
@@ -144,19 +122,9 @@ if [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] ||
         local region_end="$4"
         
         # Use tabix to extract variants in the region and check for strong associations
-        # Look for p-value < p_threshold directly in the pvalue column (column 11)
-        # Note: tabix doesn't output headers, so we process all lines
-        # Convert both values to numbers for proper comparison with scientific notation
-        local tabix_output=$(tabix -h "${gwas_file}" "${region_chr}:${region_start}-${region_end}" 2>&1)
-        local tabix_exit=$?
-        
-        if [ "${tabix_exit}" -ne 0 ] && [ -n "${tabix_output}" ]; then
-            # Tabix error - return failure
-            return 1
-        fi
-        
-        local strong_count=$(echo "${tabix_output}" | \
-           awk -v p_thresh="${p_threshold}" 'BEGIN {p_thresh_num = p_thresh + 0} ($11+0) < p_thresh_num {count++} END {print count+0}')
+        # Look for p-value < p_threshold directly in the pvalue column
+        local strong_count=$(tabix -h "${gwas_file}" "${region_chr}:${region_start}-${region_end}" 2>/dev/null | \
+           awk -v p_thresh="${p_threshold}" 'NR>1 && $11 < p_thresh {count++} END {print count+0}')
         
         # Check if any variants have strong associations
         if [ "${strong_count}" -gt 0 ]; then
@@ -169,12 +137,6 @@ if [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] ||
     # Create filtered GWAS ID list if strong_only is enabled
     if [ "${strong_only}" = "TRUE" ] || [ "${strong_only}" = "true" ]; then
         echo "Filtering GWAS files for strong associations (p < ${p_threshold}) in region ${ld_region}"
-        
-        # Check if tabix is available
-        if ! command -v tabix &> /dev/null; then
-            echo "ERROR: tabix command not found. Please ensure tabix is available in PATH."
-            exit 1
-        fi
         
         # Parse region coordinates for filtering
         region_chr=$(echo "${ld_region}" | cut -d: -f1)

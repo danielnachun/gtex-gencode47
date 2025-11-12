@@ -24,8 +24,8 @@ parser <- argparser::arg_parser("Script to run colocboost") |>
     argparser::add_argument("--mac_cutoff", help = "Minor allele count cutoff", default = 0) |>
     argparser::add_argument("--xvar_cutoff", help = "Genotype variance cutoff", default = 0) |>
     argparser::add_argument("--imiss_cutoff", help = "Missingness cutoff", default = 0) |>
-    argparser::add_argument("--run_single_gene", help = "Run single gene analysis", default = FALSE) |>
-    argparser::add_argument("--run_v39_genes", help = "Run v39 genes analysis", default = FALSE) |>
+    argparser::add_argument("--run_individual", help = "Run single gene analysis", default = FALSE) |>
+    argparser::add_argument("--run_v39", help = "Run v39 genes analysis", default = FALSE) |>
     argparser::add_argument("--v39_gene_id_path", help = "Path to list of v39 gene IDs, one per line", default = NULL) |>
     # New analysis mode flags (aliases)
     argparser::add_argument("--run_xqtl", help = "Enable xQTL coloc analysis", default = FALSE) |>
@@ -74,8 +74,8 @@ maf_cutoff        <- as.numeric(parsed_args$maf_cutoff)
 mac_cutoff        <- as.numeric(parsed_args$mac_cutoff)
 xvar_cutoff       <- as.numeric(parsed_args$xvar_cutoff)
 imiss_cutoff      <- as.numeric(parsed_args$imiss_cutoff)
-run_single_gene   <- parsed_args$run_single_gene
-run_v39_genes     <- parsed_args$run_v39_genes
+run_individual    <- parsed_args$run_individual
+run_v39           <- parsed_args$run_v39
 v39_gene_id_path  <- parsed_args$v39_gene_id_path
 
 # New derived analysis flags from aliases
@@ -114,8 +114,8 @@ cat("  maf_cutoff:", maf_cutoff, "\n")
 cat("  mac_cutoff:", mac_cutoff, "\n")
 cat("  xvar_cutoff:", xvar_cutoff, "\n")
 cat("  imiss_cutoff:", imiss_cutoff, "\n")
-cat("  run_single_gene:", run_single_gene, "\n")
-cat("  run_v39_genes:", run_v39_genes, "\n")
+cat("  run_individual:", run_individual, "\n")
+cat("  run_v39:", run_v39, "\n")
 cat("  v39_gene_id_path:", v39_gene_id_path, "\n")
 cat("  run_xqtl:", run_xqtl, "\n")
 cat("  run_separate_gwas:", run_separate_gwas, "\n")
@@ -127,9 +127,12 @@ library(devtools)
 library(magrittr)
 library(dplyr)
 #library(pecotmr)
-library(colocboost)
+#library(colocboost)
+
 # TODO: make this not hardcoded, once pecotmr is updated on CRAN
 devtools::load_all("/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/pecotmr")
+devtools::load_all("/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/colocboost")
+
 
 # TODO: make this not hardcoded
 # Source formatter to enable function call mode
@@ -172,8 +175,6 @@ n_controls <- as.numeric(gwas_meta_matched$Controls)
 # ===========================
 # Load Data for All Genes
 # ===========================
-gene_names <- sub("\\.bed\\.gz$", "", basename(phenotype_list))
-
 cat("\nLoading regional data...\n")
 data_start_time <- Sys.time()
 # Validate covariate inputs: require at least one of path or list
@@ -201,10 +202,10 @@ if (file.exists(sumstat_data_path)) {
         } else {
             rep(covariate_path, length(phenotype_list))
         },
-        conditions_list_individual = gene_names,
-    maf_cutoff = maf_cutoff,
-    mac_cutoff = mac_cutoff,
-    xvar_cutoff = xvar_cutoff,
+        region_name_col = 4,
+        maf_cutoff = maf_cutoff,
+        mac_cutoff = mac_cutoff,
+        xvar_cutoff = xvar_cutoff,
         imiss_cutoff = imiss_cutoff,
         association_window = variant_region
     )
@@ -215,7 +216,7 @@ if (file.exists(sumstat_data_path)) {
     region_data <- load_multitask_regional_data(
         region = gene_region,
         genotype_list = c(genotype_stem),
-    phenotype_list = phenotype_list,
+        phenotype_list = phenotype_list,
         covariate_list = if (!is.null(covariate_list_path)) {
             cl <- readLines(covariate_list_path)
             if (length(cl) != length(phenotype_list)) {
@@ -225,7 +226,7 @@ if (file.exists(sumstat_data_path)) {
         } else {
             rep(covariate_path, length(phenotype_list))
         },
-        conditions_list_individual = gene_names,
+        region_name_col = 4,
         sumstat_path_list = gwas_phenotype_list,
         column_file_path_list = rep(gwas_column_matching, length(gwas_phenotype_list)),
         LD_meta_file_path_list = rep(ld_meta, length(gwas_phenotype_list)),
@@ -248,6 +249,9 @@ if (file.exists(sumstat_data_path)) {
     }
 }
 
+# Extract gene names from loaded region_data (after using region_name_col = 4)
+gene_names <- names(region_data$individual_data$residual_Y)
+
 data_end_time <- Sys.time()
 cat("Data loading completed in:", round(difftime(data_end_time, data_start_time, units = "mins"), 2), "minutes\n")
 
@@ -260,7 +264,7 @@ cat("\nStarting colocboost analysis on all genes...\n")
 analysis_start_time <- Sys.time()
 res <- colocboost_analysis_pipeline(
     region_data,
-    pip_cutoff_to_skip_ind = rep(-1, length(phenotype_list)),
+    pip_cutoff_to_skip_ind = rep(-1, length(gene_names)),
     pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
     qc_method = c("rss_qc"), 
     maf_cutoff=maf_cutoff, 
@@ -283,7 +287,7 @@ format_colocboost(output_path, sub("\\.rds$", "", output_path))
 # ===========================
 # Run Colocboost Analysis on individual genes
 # ===========================
-if (run_single_gene) {
+if (run_individual) {
     cat("\nRunning colocboost analysis on individual genes...\n")
     
     # Create output directory for single gene results
@@ -361,10 +365,10 @@ if (run_single_gene) {
 # ===========================
 # Run Colocboost Analysis on v39 Gene List
 # ===========================
-if (run_v39_genes) {
+if (run_v39) {
     cat("\nRunning colocboost analysis on v39 gene list...\n")
 
-    all_gene_names <- sub("\\.bed\\.gz$", "", basename(phenotype_list))
+    all_gene_names <- gene_names
 
     # Match by core Ensembl IDs (strip tissue prefix and any version suffix)
     all_gene_names_core <- sub("^.*\\.(ENSG[0-9]+).*$", "\\1", all_gene_names)

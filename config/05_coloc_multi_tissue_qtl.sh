@@ -23,3 +23,6 @@ run_individual=FALSE
 run_xqtl_only=TRUE
 run_separate_gwas=FALSE
 run_joint_gwas=FALSE
+
+# File processing configuration
+file_type=ld_regions_string

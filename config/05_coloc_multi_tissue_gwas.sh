@@ -37,3 +37,6 @@ run_joint_gwas=TRUE
 
 # GWAS-specific parameters
 gwas_params="--gwas_id_list ${gwas_id_list} --gwas_dir ${gwas_dir} --gwas_meta ${gwas_meta} --ld_meta ${ld_meta} --gwas_column_matching ${gwas_column_matching}"
+
+# File processing configuration
+file_type=ld_regions_string

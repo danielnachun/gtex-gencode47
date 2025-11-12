@@ -97,7 +97,7 @@ rnaseqc_args=(
     --duplicate_marked_bam ${dir_prefix}/output/genome_bam/${sample_id}.${bam_file_end}
     --genes_gtf ${local_reference_dir}/${genes_gtf}
     --sample_id ${sample_id}
-    --output_dir ${dir_prefix}/output/rnaseq_qc
+    --output_dir ${dir_prefix}/output/rnaseqc_null
 )
 if [[ -n "${reference_fasta:-}" ]]; then
     rnaseqc_args+=(--genome_fasta ${local_reference_dir}/${reference_fasta})
@@ -109,8 +109,8 @@ fi
 # run rnaseq qc
 bash ${code_dir}/run_03_rnaseqc.sh "${rnaseqc_args[@]}"
 
-mkdir -p ${output_dir}/rnaseq_qc/
-rsync -Prhltv ${dir_prefix}/output/rnaseq_qc/* ${output_dir}/rnaseq_qc/
+mkdir -p ${output_dir}/rnaseqc_null/
+rsync -Prhltv ${dir_prefix}/output/rnaseqc_null/* ${output_dir}/rnaseqc_null/
 
 # Create completion marker
 completion_dir="${output_dir}/completed/rnaseqc_null"

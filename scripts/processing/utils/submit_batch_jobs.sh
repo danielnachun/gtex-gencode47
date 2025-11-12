@@ -253,12 +253,41 @@ if [ -n "${job_tmp:-}" ]; then
     sbatch_params+=(--tmp "${job_tmp}")
 fi
 
+# Check if job requires long QOS (time > 2 days)
+# Time format can be: HH:MM:SS or D-HH:MM:SS
+is_long_job=false
+job_time_value="${job_time:-12:00:00}"
+if [[ "$job_time_value" =~ ^[0-9]+- ]]; then
+    # Time is in days format (e.g., 3-00:00:00)
+    days=$(echo "$job_time_value" | cut -d'-' -f1)
+    if [ "$days" -gt 2 ]; then
+        is_long_job=true
+    fi
+elif [[ "$job_time_value" =~ ^[0-9]+:[0-9]+:[0-9]+$ ]]; then
+    # Time is in HH:MM:SS format
+    hours=$(echo "$job_time_value" | cut -d':' -f1)
+    if [ "$hours" -gt 48 ]; then
+        is_long_job=true
+    fi
+fi
+
 # Submit job array to cluster
 if [ "${submit_on}" = 'sherlock' ]; then
     # Additional parameters for sherlock
+    sherlock_params=(
+        --tmp 200G
+    )
+
+    # Use normal,owners partition for all jobs (excluding pritch)
+    if [ "$is_long_job" = true ]; then
+        sherlock_params+=(--partition normal,owners)
+    else
+        sherlock_params+=(--partition normal,owners)
+    fi
+    sherlock_params+=(--exclude pritch)
+
     sbatch \
-        --partition normal,owners \
-        --tmp 200G \
+        "${sherlock_params[@]}" \
         "${sbatch_params[@]}"
 elif [ "${submit_on}" = 'scg' ]; then
     # Additional parameters for scg

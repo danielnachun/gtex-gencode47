@@ -142,8 +142,8 @@ r_command="${code_dir}/colocboost_compare.R \
     --mac_cutoff ${mac_cutoff} \
     --xvar_cutoff ${xvar_cutoff} \
     --imiss_cutoff ${imiss_cutoff} \
-    --run_single_gene ${run_individual} \
-    --run_v39_genes ${run_v39} \
+    --run_individual ${run_individual} \
+    --run_v39 ${run_v39} \
     --v39_gene_id_path ${v39_gene_id_path}"
 
 # Add GWAS-specific parameters if running GWAS analysis

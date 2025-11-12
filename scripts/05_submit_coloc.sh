@@ -13,10 +13,12 @@ CONFIG_FILE="${1:-/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/05_
 if [ "${multi_tissue:-FALSE}" = "TRUE" ] || [ "${multi_tissue:-FALSE}" = "true" ]; then
     if [ "${run_separate_gwas:-FALSE}" = "TRUE" ] || [ "${run_separate_gwas:-FALSE}" = "true" ]; then
         output_dir="${output_dir}/multi_tissue_gwas"
+    elif [ "${run_joint_gwas:-FALSE}" = "TRUE" ] || [ "${run_joint_gwas:-FALSE}" = "true" ]; then
+        output_dir="${output_dir}/multi_tissue_gwas"
     elif [ "${run_xqtl_only:-FALSE}" = "TRUE" ] || [ "${run_xqtl_only:-FALSE}" = "true" ]; then
         output_dir="${output_dir}/multi_tissue_qtl_only"
     else
-        echo "Error: Multi-tissue mode requires either run_separate_gwas=TRUE or run_xqtl_only=TRUE"
+        echo "Error: Multi-tissue mode requires either run_separate_gwas=TRUE, run_joint_gwas=TRUE, or run_xqtl_only=TRUE"
         exit 1
     fi
 else
@@ -26,10 +28,16 @@ else
         else
             output_dir="${output_dir}/single_tissue_gwas"
         fi
+    elif [ "${run_joint_gwas:-FALSE}" = "TRUE" ] || [ "${run_joint_gwas:-FALSE}" = "true" ]; then
+        if [ "${strong_only:-FALSE}" = "TRUE" ] || [ "${strong_only:-FALSE}" = "true" ]; then
+            output_dir="${output_dir}/single_tissue_gwas_strong_only"
+        else
+            output_dir="${output_dir}/single_tissue_gwas"
+        fi
     elif [ "${run_xqtl_only:-FALSE}" = "TRUE" ] || [ "${run_xqtl_only:-FALSE}" = "true" ]; then
         output_dir="${output_dir}/single_tissue_qtl_only"
     else
-        echo "Error: Single-tissue mode requires either run_separate_gwas=TRUE or run_xqtl_only=TRUE"
+        echo "Error: Single-tissue mode requires either run_separate_gwas=TRUE, run_joint_gwas=TRUE, or run_xqtl_only=TRUE"
         exit 1
     fi
 fi
@@ -38,13 +46,22 @@ fi
 completion_dir="${output_dir}/completed"
 mkdir -p "${completion_dir}"
 
+# Create the LD region list file from the BED file if it doesn't exist
+ld_region_list_file="${output_dir}/file_lists/file_list_coloc_ld_blocks.txt"
+mkdir -p "$(dirname "${ld_region_list_file}")"
+if [ ! -f "${ld_region_list_file}" ]; then
+    # Convert BED file to region strings (chr:start-end format)
+    awk 'NR>1 {printf "%s:%d-%d\n", $1, $2+1, $3}' "${ld_region_list}" > "${ld_region_list_file}"
+    echo "Created LD region list file: ${ld_region_list_file}"
+fi
+
 # Call the shared batch submission utility
 exec "${code_dir}/utils/submit_batch_jobs.sh" \
     "${CONFIG_FILE}" \
     "${code_dir}/utils/batch_process_files.sh" \
     "coloc_$(basename "${output_dir}")" \
     "${code_dir}/05_colocalize_regions.sh" \
-    --ld_region_list "${output_dir}/file_lists/file_list_coloc_ld_blocks.txt" \
+    --ld_region_list "${ld_region_list_file}" \
     --tissue_id_list "${tissue_id_list}" \
     --genotype_stem "${genotype_stem}" \
     --covariate_dir "${covariate_dir}" \
@@ -60,4 +77,4 @@ exec "${code_dir}/utils/submit_batch_jobs.sh" \
     --run_xqtl_only "${run_xqtl_only:-FALSE}" \
     --run_separate_gwas "${run_separate_gwas:-FALSE}" \
     --run_joint_gwas "${run_joint_gwas:-FALSE}" \
-    ${gwas_params:-}
+    ${gwas_params-}

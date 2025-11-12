@@ -9,7 +9,7 @@ code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
 regenerate_all=false
 num_parallel=1
 max_array_size=1000
-job_time=48:00:00
+job_time=100:00:00
 job_mem=256G
 submit_on=sherlock
 

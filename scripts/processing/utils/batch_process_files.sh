@@ -49,11 +49,24 @@ echo "Requested CPUs: ${SLURM_CPUS_PER_TASK}"
 # Process all files in batch file continuously with num_parallel jobs running
 echo "Processing all files with ${num_parallel} parallel jobs"
 
-# Process all files in the batch file continuously
-cat "${file_list}" | parallel -j"${num_parallel}" --ungroup --verbose \
-    "${processing_script}" \
-    "$@" \
-    --bam_file {}
+# Determine parameter name based on processing script or file_type
+# For coloc script (05_colocalize_regions.sh), use --ld_region parameter
+# For other scripts, use --bam_file (default) or FILE_PARAM if set
+if [[ "${processing_script}" == *"05_colocalize_regions.sh" ]] || [ "${file_type:-}" = "ld_regions_string" ]; then
+    # For coloc, the file list contains region strings (e.g., "chr1:1000-2000")
+    # Pass each region string with --ld_region parameter
+    cat "${file_list}" | parallel -j"${num_parallel}" --ungroup --verbose \
+        "${processing_script}" \
+        "$@" \
+        --ld_region {}
+else
+    # Default behavior: pass files with --bam_file parameter
+    file_param="${FILE_PARAM:---bam_file}"
+    cat "${file_list}" | parallel -j"${num_parallel}" --ungroup --verbose \
+        "${processing_script}" \
+        "$@" \
+        "${file_param}" {}
+fi
 
 echo "Batch finished"
 

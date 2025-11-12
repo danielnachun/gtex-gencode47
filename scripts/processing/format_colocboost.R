@@ -2,250 +2,16 @@
 
 #' format_colocboost.R
 #'
-#' Read a colocboost result .rds file and output credible sets tables.
+#' Read a colocboost result .rds file and output robust credible sets tables.
 #'
 #' - Accepts an input RDS path containing colocboost results produced by colocboost_analysis_pipeline
 #'   within a list structure, where elements like xqtl_coloc and joint_gwas may be present.
+#' - Applies get_robust_colocalization() to filter results.
 #' - Extracts trait-specific (uCoS) and trait-shared (CoS) credible sets and associated fields.
-#' - Writes a tab-delimited table to <output_prefix>.(xqtl_coloc|joint_gwas).txt for each present element.
-#' - Also writes a "robust" version of each result, filtered by get_robust_colocalization(...).
+#' - Writes a tab-delimited table to <output_prefix>.(xqtl_coloc|joint_gwas).robust.txt for each present element.
 #'
 
 # NOTE: argparser is only needed for CLI mode; we import it conditionally below.
-
-# Custom function to convert filtered trait_shared entries to trait_specific
-get_robust_colocalization_with_conversion <- function(cb_output,
-                                                      original_obj = NULL,  # Not used in simplified approach
-                                                      cos_npc_cutoff = 0.5,
-                                                      npc_outcome_cutoff = 0.2,
-                                                      pvalue_cutoff = NULL,
-                                                      weight_fudge_factor = 1.5,
-                                                      coverage = 0.95,
-                                                      verbose = TRUE) {
-  # Check if cb_output is a valid colocboost object
-  if (is.null(cb_output)) {
-    if (verbose) cat("Warning: colocboost object is NULL, returning original object\n")
-    return(cb_output)
-  }
-  if (!inherits(cb_output, "colocboost")) {
-    if (verbose) cat("Warning: Object is not a valid colocboost object (class:", class(cb_output), "), returning original object\n")
-    return(cb_output)
-  }
-  
-  # First apply standard robust filtering
-  if (verbose) cat("DEBUG: Applying robust filtering with cos_npc_cutoff =", cos_npc_cutoff, "and npc_outcome_cutoff =", npc_outcome_cutoff, "\n")
-  tryCatch({
-    # Suppress the "No colocalization results in this region!" warning
-    robust_res <- suppressWarnings(colocboost::get_robust_colocalization(
-      cb_output, 
-      cos_npc_cutoff = cos_npc_cutoff, 
-      npc_outcome_cutoff = npc_outcome_cutoff,
-      pvalue_cutoff = pvalue_cutoff,
-      weight_fudge_factor = weight_fudge_factor,
-      coverage = coverage
-    ))
-    if (verbose) cat("DEBUG: get_robust_colocalization completed successfully\n")
-  }, error = function(e) {
-    if (verbose) cat("Warning: get_robust_colocalization failed:", e$message, "\n")
-    return(cb_output)
-  })
-  
-  # Check if robust_res has the expected structure
-  if (is.null(robust_res) || is.null(robust_res$cos_details) || is.null(robust_res$cos_details$cos)) {
-    if (verbose) cat("Warning: Robust results do not have expected structure, returning original object\n")
-    if (verbose) cat("DEBUG: robust_res is null:", is.null(robust_res), "\n")
-    if (!is.null(robust_res)) {
-      if (verbose) cat("DEBUG: robust_res$cos_details is null:", is.null(robust_res$cos_details), "\n")
-      if (!is.null(robust_res$cos_details)) {
-        if (verbose) cat("DEBUG: robust_res$cos_details$cos is null:", is.null(robust_res$cos_details$cos), "\n")
-      }
-    }
-    return(cb_output)
-  }
-  
-  if (verbose) cat("DEBUG: Robust filtering successful, checking results...\n")
-  
-  # Identify filtered trait_shared entries by comparing original and robust results
-  original_cos_ids <- names(cb_output$cos_details$cos$cos_index)
-  robust_cos_ids <- names(robust_res$cos_details$cos$cos_index)
-  filtered_cos_ids <- setdiff(original_cos_ids, robust_cos_ids)
-  
-  if (verbose) cat("DEBUG: Original COS sets:", length(original_cos_ids), "\n")
-  if (verbose) cat("DEBUG: Robust COS sets:", length(robust_cos_ids), "\n")
-  if (verbose) cat("DEBUG: Filtered COS sets:", length(filtered_cos_ids), "\n")
-  if (verbose) cat("Found", length(filtered_cos_ids), "filtered colocalization sets to convert\n")
-  
-  if (length(filtered_cos_ids) > 0) {
-    # Get original cos_npc values for filtered entries
-    original_cos_npc_map <- NULL
-    if (!is.null(cb_output$cos_summary)) {
-      cs <- cb_output$cos_summary
-      if (!is.null(cs$cos_id) && !is.null(cs$cos_npc)) {
-        original_cos_npc_map <- setNames(as.numeric(cs$cos_npc), cs$cos_id)
-      }
-    }
-    
-    # Check which phenotype-variant combinations are already covered in robust results
-    # We need to track which specific phenotype-variant pairs are already in robust CoS
-    robust_phenotype_variant_pairs <- c()
-    if (!is.null(robust_res$cos_details$cos$cos_variables) && !is.null(robust_res$cos_details$cos_outcomes$outcome_index)) {
-      for (robust_cos_idx in seq_along(robust_res$cos_details$cos$cos_variables)) {
-        robust_variants <- robust_res$cos_details$cos$cos_variables[[robust_cos_idx]]
-        robust_outcomes <- robust_res$cos_details$cos_outcomes$outcome_index[[robust_cos_idx]]
-        outcome_names <- robust_res$cos_details$cos_outcomes$outcome_name[[robust_cos_idx]]
-        
-        # Create phenotype-variant pairs for this robust CoS
-        for (outcome_idx in robust_outcomes) {
-          phenotype_name <- outcome_names[which(robust_outcomes == outcome_idx)][1]
-          for (variant in robust_variants) {
-            pair <- paste(phenotype_name, variant, sep = "|")
-            robust_phenotype_variant_pairs <- c(robust_phenotype_variant_pairs, pair)
-          }
-        }
-      }
-    }
-    
-    # Create converted ucos entries from filtered cos entries
-    # Only convert outcomes that aren't already in smaller joint CoS sets
-    converted_ucos <- list()
-    
-    for (cos_id in filtered_cos_ids) {
-      # Get the original colocalization details
-      cos_idx <- which(names(cb_output$cos_details$cos$cos_index) == cos_id)
-      if (length(cos_idx) > 0) {
-        # Get the outcomes for this colocalization
-        outcomes <- cb_output$cos_details$cos_outcomes$outcome_index[[cos_idx]]
-        outcome_names <- cb_output$cos_details$cos_outcomes$outcome_name[[cos_idx]]
-        cos_variables <- cb_output$cos_details$cos$cos_variables[[cos_idx]]
-        cos_weights <- cb_output$cos_details$cos_weights[[cos_idx]]
-        
-        # Get original cos_npc for this colocalization
-        original_cos_npc <- if (!is.null(original_cos_npc_map) && !is.null(original_cos_npc_map[[cos_id]])) {
-          original_cos_npc_map[[cos_id]]
-        } else {
-          NA_real_
-        }
-        
-        # Get npc_outcome values for this CoS if available
-        cos_npc_outcome_values <- NULL
-        if (!is.null(cb_output$cos_details$cos_outcomes_npc) && 
-            !is.null(cb_output$cos_details$cos_outcomes_npc[[cos_id]])) {
-          cos_npc_data <- cb_output$cos_details$cos_outcomes_npc[[cos_id]]
-          if (!is.null(cos_npc_data$npc_outcome)) {
-            # Reorder npc_outcome values to match the phenotype order in outcomes
-            cos_npc_outcome_values <- cos_npc_data$npc_outcome[match(outcomes, cos_npc_data$outcomes_index)]
-          }
-        }
-        
-        if (verbose) cat("Processing", length(outcomes), "traits from", cos_id, "(original cos_npc:", original_cos_npc, ")\n")
-        
-        # For each outcome, create a trait_specific entry only if not already in smaller joint CoS
-        for (i in seq_along(outcomes)) {
-          outcome_idx <- outcomes[i]
-          outcome_name <- outcome_names[i]
-          
-          # Check if this phenotype-variant combination is already covered in robust results
-          # Create phenotype-variant pairs for this outcome
-          phenotype_variant_pairs <- paste(rep(outcome_name, length(cos_variables)), cos_variables, sep = "|")
-          
-          # Check if any of these pairs are already covered
-          already_covered <- any(phenotype_variant_pairs %in% robust_phenotype_variant_pairs)
-          
-          if (already_covered) {
-            if (verbose) cat("  Skipping", outcome_name, "- phenotype-variant combinations already covered in robust results\n")
-            next
-          }
-          
-          # Get the trait-specific npc_outcome value for this outcome
-          trait_specific_npc <- if (!is.null(cos_npc_outcome_values) && length(cos_npc_outcome_values) >= i) {
-            cos_npc_outcome_values[i]
-          } else {
-            original_cos_npc  # Fallback to overall cos_npc if trait-specific not available
-          }
-          
-          # Create a new trait_specific entry using the same variants but individual trait weights
-          ucos_entry <- list(
-            ucos_index = cos_variables,
-            ucos_variables = cos_variables,
-            outcome_index = outcome_idx,
-            outcome_name = outcome_name,
-            ucos_weight = cos_weights[, i, drop = FALSE],
-            ucos_purity = list(
-              min_abs_cor = 1.0,  # Single trait, perfect correlation with itself
-              median_abs_cor = 1.0,
-              max_abs_cor = 1.0
-            ),
-            # Add flag to indicate this came from a filtered trait_shared entry
-            converted_from_shared = TRUE,
-            original_cos_id = cos_id,
-            original_cos_npc = trait_specific_npc,  # Store the trait-specific npc_outcome value
-            original_npc_outcome = trait_specific_npc  # Store the original npc_outcome value for this trait
-          )
-          
-          converted_ucos[[length(converted_ucos) + 1]] <- ucos_entry
-        }
-      }
-    }
-    
-    # Add converted entries to ucos_details
-    if (length(converted_ucos) > 0) {
-      if (verbose) cat("Created", length(converted_ucos), "converted trait_specific entries\n")
-      
-      # Initialize ucos_details if it doesn't exist
-      if (is.null(robust_res$ucos_details)) {
-        robust_res$ucos_details <- list(
-          ucos = list(ucos_index = list(), ucos_variables = list()),
-          ucos_outcomes = list(outcome_index = list(), outcome_name = list()),
-          ucos_weight = list(),
-          ucos_purity = list(min_abs_cor = matrix(1), median_abs_cor = matrix(1), max_abs_cor = matrix(1)),
-          ucos_top_variables = data.frame(),
-          converted_from_shared = list(),
-          original_cos_id = list(),
-          original_cos_npc = list(),
-          original_npc_outcome = list()
-        )
-      } else {
-        # If ucos_details already exists, initialize conversion metadata for existing entries
-        existing_count <- length(robust_res$ucos_details$ucos$ucos_variables)
-        if (length(robust_res$ucos_details$converted_from_shared) == 0) {
-          # Initialize conversion metadata for existing entries
-          for (i in seq_len(existing_count)) {
-            robust_res$ucos_details$converted_from_shared[[i]] <- FALSE
-            robust_res$ucos_details$original_cos_id[[i]] <- NA_character_
-            robust_res$ucos_details$original_cos_npc[[i]] <- NA_real_
-            robust_res$ucos_details$original_npc_outcome[[i]] <- NA_real_
-          }
-        }
-      }
-      
-      # Add converted entries
-      for (i in seq_along(converted_ucos)) {
-        ucos_entry <- converted_ucos[[i]]
-        entry_name <- paste0("ucos", i, ":y", ucos_entry$outcome_index)
-        
-        robust_res$ucos_details$ucos$ucos_index[[length(robust_res$ucos_details$ucos$ucos_index) + 1]] <- ucos_entry$ucos_index
-        robust_res$ucos_details$ucos$ucos_variables[[length(robust_res$ucos_details$ucos$ucos_variables) + 1]] <- ucos_entry$ucos_variables
-        robust_res$ucos_details$ucos_outcomes$outcome_index[[length(robust_res$ucos_details$ucos_outcomes$outcome_index) + 1]] <- ucos_entry$outcome_index
-        robust_res$ucos_details$ucos_outcomes$outcome_name[[length(robust_res$ucos_details$ucos_outcomes$outcome_name) + 1]] <- ucos_entry$outcome_name
-        robust_res$ucos_details$ucos_weight[[length(robust_res$ucos_details$ucos_weight) + 1]] <- ucos_entry$ucos_weight
-        
-        # Set names for the lists
-        names(robust_res$ucos_details$ucos$ucos_variables)[length(robust_res$ucos_details$ucos$ucos_variables)] <- entry_name
-        names(robust_res$ucos_details$ucos_outcomes$outcome_index)[length(robust_res$ucos_details$ucos_outcomes$outcome_index)] <- entry_name
-        
-        # Add conversion flags and original cos_npc
-        robust_res$ucos_details$converted_from_shared[[length(robust_res$ucos_details$converted_from_shared) + 1]] <- ucos_entry$converted_from_shared
-        robust_res$ucos_details$original_cos_id[[length(robust_res$ucos_details$original_cos_id) + 1]] <- ucos_entry$original_cos_id
-        robust_res$ucos_details$original_cos_npc[[length(robust_res$ucos_details$original_cos_npc) + 1]] <- ucos_entry$original_cos_npc
-        robust_res$ucos_details$original_npc_outcome[[length(robust_res$ucos_details$original_npc_outcome) + 1]] <- ucos_entry$original_npc_outcome
-      }
-    }
-  }
-  
-  return(robust_res)
-}
-
-
 
 format_colocboost <- function(pecotmr_colocboost, output_prefix, verbose = TRUE) {
   if (is.null(pecotmr_colocboost) || identical(pecotmr_colocboost, "")) {
@@ -270,19 +36,22 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix, verbose = TRUE)
   # ----------------------------
   processed_any <- FALSE
 
-  # Helper to process and write both normal and robust versions
+  # Helper to get robust and write out
   process_and_write <- function(res, prefix, verbose = TRUE) {
-    # Standard
-    cs_df <- extract_credible_sets(res, verbose = verbose, include_conversion_metadata = FALSE)
-    outfile <- paste0(prefix, ".txt")
+    # Get robust colocalization
+    robust_res <- suppressWarnings(colocboost::get_robust_colocalization(
+      res,
+      cos_npc_cutoff = 0.5,
+      npc_outcome_cutoff = 0.2,
+      pvalue_cutoff = NULL,
+      weight_fudge_factor = 1.5,
+      coverage = 0.95
+    ))
+    
+    # Extract credible sets and write out
+    cs_df <- extract_credible_sets(robust_res, verbose = verbose, include_conversion_metadata = FALSE)
+    outfile <- paste0(prefix, ".robust.txt")
     write_cs_table(cs_df, outfile, verbose = verbose)
-
-    # Robust with trait_shared to trait_specific conversion
-    # Pass the original colocboost object for proper ucos computation
-    robust_res <- get_robust_colocalization_with_conversion(res, obj, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2, verbose = verbose)
-    cs_df_robust <- extract_credible_sets(robust_res, verbose = verbose, include_conversion_metadata = TRUE)
-    outfile_robust <- paste0(prefix, ".robust.txt")
-    write_cs_table(cs_df_robust, outfile_robust, verbose = verbose)
   }
 
   if (is.list(obj) && !is.null(obj$xqtl_coloc)) {

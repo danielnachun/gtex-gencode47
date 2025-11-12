@@ -55,7 +55,7 @@ region_data <- load_multitask_regional_data(
     genotype_list = c(genotype_stem),
     phenotype_list = phenotype_list,
     covariate_list = rep(covariate_path, length(phenotype_list)),
-    conditions_list_individual = sub("\\.bed\\.gz$", "", basename(phenotype_list)),
+    region_name_col = 4,
     mac_cutoff = mac_cutoff,
     xvar_cutoff = xvar_cutoff,
     imiss_cutoff = imiss_cutoff,
@@ -64,12 +64,15 @@ region_data <- load_multitask_regional_data(
 data_end_time <- Sys.time()
 cat("Data loading completed in:", round(difftime(data_end_time, data_start_time, units = "mins"), 2), "minutes\n")
 
+# Extract gene names from loaded region_data (after using region_name_col = 4)
+gene_names <- names(region_data$individual_data$residual_Y)
+
 # run colocboost
 cat("\nStarting colocboost analysis...\n")
 analysis_start_time <- Sys.time()
 res <- colocboost_analysis_pipeline(
     region_data,
-    pip_cutoff_to_skip_ind = rep(0, length(phenotype_list))
+    pip_cutoff_to_skip_ind = rep(0, length(gene_names))
 )
 analysis_end_time <- Sys.time()
 cat("Colocboost analysis completed in:", round(difftime(analysis_end_time, analysis_start_time, units = "mins"), 2), "minutes\n")
