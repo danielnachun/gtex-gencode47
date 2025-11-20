@@ -278,9 +278,9 @@ if [ "${submit_on}" = 'sherlock' ]; then
         --tmp 200G
     )
 
-    # Use normal,owners partition for all jobs (excluding pritch)
+    # Use sfgf partition for long jobs, normal,owners for short jobs (excluding pritch)
     if [ "$is_long_job" = true ]; then
-        sherlock_params+=(--partition normal,owners)
+        sherlock_params+=(--partition sfgf,biochem)
     else
         sherlock_params+=(--partition normal,owners)
     fi

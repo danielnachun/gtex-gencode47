@@ -41,6 +41,7 @@ options_array=(
     reference_fasta
     rsem_ref_dir
     star_index
+    bam_file_end
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -67,6 +68,8 @@ while true; do
             rsem_ref_dir="${2}"; shift 2 ;;
         --star_index )
             star_index="${2}"; shift 2 ;;
+        --bam_file_end )
+            bam_file_end="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -78,8 +81,14 @@ done
 # activate the pixi enviroment
 source <(pixi shell-hook --environment realignbam --manifest-path ${code_dir}/pixi.toml)
 
-sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
-participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
+sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))
+if [[ ${sample_id} == GTEX-* ]]; then
+    participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
+elif [[ ${sample_id} == DGTEX-* ]]; then
+    participant_id=$(echo ${sample_id} | cut -d '-' -f1)
+else
+    participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
+fi
 
 
 # make tmp dir
@@ -92,7 +101,7 @@ rsync -PrhLtv ${bam_file} ${dir_prefix}/raw
 rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/raw
 
 # process bams to fastqs
-bash ${code_dir}/run_02_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+bash ${code_dir}/run_02_bam_to_fastq.sh --bam_file ${dir_prefix}/raw/${sample_id}.${bam_file_end} \
     --sample_id ${sample_id} \
     --reference_fasta ${local_reference_dir}/${reference_fasta} \
     --tmp_dir ${dir_prefix}/tmp/fastq

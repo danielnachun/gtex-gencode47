@@ -45,6 +45,7 @@ options_array=(
     intervals_bed
     ipa_annotation
     editing_bed
+    bam_file_end
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -77,6 +78,8 @@ while true; do
             ipa_annotation="${2}"; shift 2 ;;
         --editing_bed )
             editing_bed="${2}"; shift 2 ;;
+        --bam_file_end )
+            bam_file_end="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -89,7 +92,7 @@ done
 source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)
 
 # map job id to line number and then to sample id
-sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
+sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
 
@@ -104,7 +107,7 @@ rsync -PrhLtv ${bam_file}.bai ${dir_prefix}/references/genome_bam
 
 # run rnaseq qc
 bash ${code_dir}/run_03_rnaseqc.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
     --genes_gtf ${local_reference_dir}/${genes_gtf} \
     --genome_fasta ${local_reference_dir}/${reference_fasta} \
     --intervals_bed ${local_reference_dir}/${intervals_bed} \
@@ -116,7 +119,7 @@ rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run coverage
 bash ${code_dir}/run_03_bam_to_coverage.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
     --chr_sizes ${local_reference_dir}/${chr_sizes} \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/coverage
@@ -144,7 +147,7 @@ if check_vcf_file "$vcf_path" "VCF" && check_vcf_file "$vcf_index_path" "VCF ind
         --dir_prefix ${dir_prefix} \
         --genome_fasta ${local_reference_dir}/${reference_fasta} \
         --vcf_dir ${vcf_dir} \
-        --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+        --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
         --output_dir ${dir_prefix}/output/ase
 else
     echo "Warning: Skipping GATK step because the required VCF files are missing."
@@ -157,7 +160,7 @@ rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 bash ${code_dir}/run_03_regtools.sh \
     --sample_id ${sample_id} \
     --dir_prefix ${dir_prefix} \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
     --output_dir ${dir_prefix}/output/leafcutter
 
 # copy out results
@@ -165,7 +168,7 @@ rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run fraser quantification
 bash ${code_dir}/run_03_fraser.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
     --sample_id ${sample_id} \
     --output_dir ${dir_prefix}/output/fraser \
     --working_dir ${local_reference_dir}/${sample_id} \
@@ -176,7 +179,7 @@ rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # run ipafinder
 bash ${code_dir}/run_03_ipafinder.sh \
-    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+    --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
     --sample_id ${sample_id} \
     --ipa_annotation ${local_reference_dir}/${ipa_annotation} \
     --output_dir ${dir_prefix}/output/ipafinder
@@ -186,7 +189,7 @@ rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # # run edsite quantification
 # bash ${code_dir}/run_edsite_pileup.sh \
-#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.Aligned.sortedByCoord.out.patched.v11md.bam \
+#     --duplicate_marked_bam ${dir_prefix}/references/genome_bam/${sample_id}.${bam_file_end} \
 #     --sample_id ${sample_id} \
 #     --reference_fasta ${local_reference_dir}/${reference_fasta} \
 #     --editing_bed ${local_reference_dir}/${editing_bed} \

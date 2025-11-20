@@ -10,6 +10,7 @@ editing_bed=test_edsites.txt
 vcf_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/processed/vcfs
 output_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues_quantifications
 code_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing
+bam_file_end=Aligned.sortedByCoord.out.patched.v11md.bam
 regenerate_all=false
 num_parallel=1
 max_array_size=1000
