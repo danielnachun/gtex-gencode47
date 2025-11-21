@@ -12,5 +12,5 @@ job_mem=4G
 submit_on=scg
 
 # File processing configuration
-file_type=ld_regions
+file_type=ld_regions_string
 output_dir=${out_dir}

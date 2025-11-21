@@ -6,7 +6,6 @@
 # Set bash options for verbose output and to fail immediately on errors or if variables are undefined.
 set -o xtrace -o nounset -o pipefail -o errexit
 
-# Note: tabix will be loaded via pixi environment activation below
 
 # Helper functions
 check_for_file() {
@@ -37,7 +36,6 @@ options_array=(
     expression_dir
     all_v39_genes_path
     region_padding
-    association_padding
     output_dir
     code_dir
     # GWAS-specific parameters (optional)
@@ -73,7 +71,6 @@ while true; do
         --expression_dir ) expression_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --all_v39_genes_path ) all_v39_genes_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --region_padding ) region_padding="${2}"; shift 2 ;;
-        --association_padding ) association_padding="${2}"; shift 2 ;;
         --output_dir ) output_dir="${2}"; shift 2 ;;
         --code_dir ) code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         # GWAS-specific parameters
@@ -109,9 +106,8 @@ strong_only=${strong_only:-FALSE}
 p_threshold=${p_threshold:-5e-8}
 
 # Activate pixi environment to get tabix and other tools
-if [ -n "${code_dir:-}" ] && command -v pixi &> /dev/null; then
-    source <(pixi shell-hook --environment pecotmr --manifest-path "${code_dir}/pixi.toml" 2>/dev/null) || true
-fi
+source <(pixi shell-hook --environment pecotmr --manifest-path "${code_dir}/pixi.toml")
+
 
 # Get LD region - either from parameter or from ld_region_list using SLURM_ARRAY_TASK_ID
 if [ -n "${ld_region:-}" ]; then
@@ -143,9 +139,6 @@ if [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] ||
         local region_start="$3"
         local region_end="$4"
         
-        # Use tabix to extract variants in the region and check for strong associations
-        # Look for p-value < p_threshold directly in the pvalue column (column 11)
-        # Note: tabix doesn't output headers, so we process all lines
         # Convert both values to numbers for proper comparison with scientific notation
         local tabix_output=$(tabix -h "${gwas_file}" "${region_chr}:${region_start}-${region_end}" 2>&1)
         local tabix_exit=$?
@@ -169,13 +162,7 @@ if [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] ||
     # Create filtered GWAS ID list if strong_only is enabled
     if [ "${strong_only}" = "TRUE" ] || [ "${strong_only}" = "true" ]; then
         echo "Filtering GWAS files for strong associations (p < ${p_threshold}) in region ${ld_region}"
-        
-        # Check if tabix is available
-        if ! command -v tabix &> /dev/null; then
-            echo "ERROR: tabix command not found. Please ensure tabix is available in PATH."
-            exit 1
-        fi
-        
+
         # Parse region coordinates for filtering
         region_chr=$(echo "${ld_region}" | cut -d: -f1)
         region_start=$(echo "${ld_region}" | cut -d: -f2 | cut -d- -f1)
@@ -352,9 +339,11 @@ else
     exit 1
 fi
 
-# Create completion marker
+# Create completion marker using normalized region string for filesystem safety
+# Normalize the region string to handle colons and other special characters
 completion_dir="${output_dir}/completed"
 mkdir -p "${completion_dir}"
-completion_file="${completion_dir}/${ld_region}.completed"
+normalized_region=$(echo "$ld_region" | tr '\t' '_' | tr '\n' ' ' | sed 's/[:/]/_/g' | tr -d '\r' | sed 's/  */_/g' | sed 's/^_\|_$//g')
+completion_file="${completion_dir}/${normalized_region}.completed"
 echo "Processing completed successfully for ld region ${ld_region}" > "${completion_file}"
 echo "Completion marker created: ${completion_file}"

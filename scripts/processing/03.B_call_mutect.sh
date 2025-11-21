@@ -38,7 +38,8 @@ options_array=(
     output_dir
     code_dir
     vcf_dir
-    bam_file
+    sample_id
+    bam_dir
     reference_fasta
     dbsnp
     indels_mills
@@ -46,6 +47,8 @@ options_array=(
     gene_intervals_bed
     full_vcf_file
     exac_reference
+    bam_file_end
+    completion_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -64,8 +67,10 @@ while true; do
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --vcf_dir )
             vcf_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --bam_file )
-            bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --sample_id )
+            sample_id="${2}"; shift 2 ;;
+        --bam_dir )
+            bam_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
         --dbsnp )
@@ -80,6 +85,10 @@ while true; do
             full_vcf_file="${2}"; shift 2 ;;
         --exac_reference )
             exac_reference="${2}"; shift 2 ;;
+        --bam_file_end )
+            bam_file_end="${2}"; shift 2 ;;
+        --completion_dir )
+            completion_dir="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -140,11 +149,16 @@ done
 
 echo "Pixi environment activated successfully after $attempt attempt(s)."
 
+# Construct BAM file path from bam_dir, sample_id, and bam_file_end
+bam_file="${bam_dir}/${sample_id}.${bam_file_end}"
 
-# map job id to line number and then to sample id
-sample_id=$(basename $(echo ${bam_file} | sed 's/\.Aligned\.sortedByCoord\.out\.patched\.v11md\.bam//'))
+# Check that BAM file exists
+if [[ ! -f ${bam_file} ]]; then
+    echo "Error: BAM file ${bam_file} does not exist."
+    exit 1
+fi
+
 participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
-
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
@@ -262,7 +276,7 @@ fi
 rsync -Prhltv ${dir_prefix}/output/ ${output_dir}
 
 # Create completion marker file to indicate successful processing
-completion_dir="${output_dir}/completed/mutect"
+completion_dir="${completion_dir:-${output_dir}/completed/call_mutect}"
 mkdir -p "${completion_dir}"
 completion_file="${completion_dir}/${sample_id}.completed"
 echo "Processing completed successfully for sample: ${sample_id}" > "${completion_file}"

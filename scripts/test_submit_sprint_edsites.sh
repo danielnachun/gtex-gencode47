@@ -7,7 +7,7 @@ CONFIG_FILE="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/config/test/spr
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
 # get all the realigned bam paths
-bam_dir_bam_list=$(ls "$realign_bam_dir" | grep 'Aligned.sortedByCoord.out.patched.v11md.bam$')
+bam_dir_bam_list=$(ls "$bam_dir" | grep 'Aligned.sortedByCoord.out.patched.v11md.bam$')
 # filter to only those in gtex_ids
 full_bam_list=$(grep -F -f "$gtex_ids" <<< "$bam_dir_bam_list")
 original_count=$(echo "$full_bam_list" | wc -l)
@@ -19,10 +19,10 @@ echo "Original sample count: ${original_count}"
 regenerate_all=${regenerate_all:-false}
 if [ "${regenerate_all}" = true ]; then
     # run all the bams in the input folder
-    bams_to_sprint=$(sed "s|^|${realign_bam_dir}/|" <<< "$full_bam_list")
+    bams_to_sprint=$(sed "s|^|${bam_dir}/|" <<< "$full_bam_list")
 else
     # only sprint a bam if hyperedited reads output doesn't exist
-    bams_to_sprint=$(grep -v -F -f <(ls "${output_dir}/sprint/unaligned/" | sed 's|\.hyperedited_reads\.sorted\.bam$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${realign_bam_dir}/|")
+    bams_to_sprint=$(grep -v -F -f <(ls "${output_dir}/sprint/unaligned/" | sed 's|\.hyperedited_reads\.sorted\.bam$|.Aligned.sortedByCoord.out.patched.v11md.bam|') <<< "$full_bam_list" | sed "s|^|${bam_dir}/|")
 fi
 
 # Check if bams_to_sprint is empty

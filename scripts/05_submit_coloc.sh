@@ -42,25 +42,30 @@ else
     fi
 fi
 
-# Set completion directory
-completion_dir="${output_dir}/completed"
-mkdir -p "${completion_dir}"
-
-# Create the LD region list file from the BED file if it doesn't exist
+# Generate list of all LD regions to process
+# Convert BED file (0-based, half-open) to region strings (chr:start-end, 1-based inclusive)
 ld_region_list_file="${output_dir}/file_lists/file_list_coloc_ld_blocks.txt"
 mkdir -p "$(dirname "${ld_region_list_file}")"
 if [ ! -f "${ld_region_list_file}" ]; then
-    # Convert BED file to region strings (chr:start-end format)
     awk 'NR>1 {printf "%s:%d-%d\n", $1, $2+1, $3}' "${ld_region_list}" > "${ld_region_list_file}"
     echo "Created LD region list file: ${ld_region_list_file}"
 fi
 
-# Call the shared batch submission utility
+# Create completion directory (using job name)
+job_name="coloc_$(basename "${output_dir}")"
+mkdir -p "${output_dir}/completed/${job_name}"
+
+# Submit batch jobs: helper will normalize regions for completion checking, filter completed, and divide into batches
 exec "${code_dir}/utils/submit_batch_jobs.sh" \
-    "${CONFIG_FILE}" \
-    "${code_dir}/utils/batch_process_files.sh" \
-    "coloc_$(basename "${output_dir}")" \
-    "${code_dir}/05_colocalize_regions.sh" \
+    --config_file "${CONFIG_FILE}" \
+    --batch_script "${code_dir}/utils/batch_process_files.sh" \
+    --job_name "${job_name}" \
+    --items_list_file "${ld_region_list_file}" \
+    --processing_script "${code_dir}/05_colocalize_regions.sh" \
+    --file_param "--ld_region" \
+    --completion_dir "${output_dir}/completed/${job_name}" \
+    --regenerate_all "${regenerate_all:-false}" \
+    -- \
     --ld_region_list "${ld_region_list_file}" \
     --tissue_id_list "${tissue_id_list}" \
     --genotype_stem "${genotype_stem}" \
@@ -68,7 +73,6 @@ exec "${code_dir}/utils/submit_batch_jobs.sh" \
     --expression_dir "${expression_dir}" \
     --all_v39_genes_path "${all_v39_genes_path}" \
     --region_padding "${region_padding}" \
-    --association_padding "${association_padding}" \
     --output_dir "${output_dir}" \
     --code_dir "${code_dir}" \
     --multi_tissue "${multi_tissue:-FALSE}" \

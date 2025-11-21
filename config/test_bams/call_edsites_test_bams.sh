@@ -1,4 +1,4 @@
-realign_bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues/genome_bam
+bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/all_tissues/genome_bam
 gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/other_references/editing_test_samples.txt
 reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/edsite_references
 reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta

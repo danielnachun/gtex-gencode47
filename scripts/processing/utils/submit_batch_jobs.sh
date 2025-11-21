@@ -1,227 +1,108 @@
 #!/usr/bin/env bash
 
-# Shared utility for submitting batch jobs with parallel/series processing
-# Usage: submit_batch_jobs.sh <config_file> <batch_script> <job_name> [processing_script] [additional_params...]
+set -o nounset -o errexit
 
-set -o xtrace -o nounset -o errexit
+# Parse command line arguments with getopt
+options_array=(
+    config_file
+    batch_script
+    job_name
+    items_list_file
+    processing_script
+    file_param
+    completion_dir
+    regenerate_all
+)
 
-# Parse arguments
-CONFIG_FILE="${1}"
-BATCH_SCRIPT="${2}"
-JOB_NAME="${3}"
-shift 3  # Remove first 3 arguments, rest are additional parameters
+longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
+
+arguments=$(getopt --options a --longoptions "${longoptions}" --name 'submit_batch_jobs' -- "$@")
+eval set -- "${arguments}"
+
+file_param=${file_param-}
+regenerate_all=${regenerate_all-false}
+
+while true; do
+    case "${1}" in
+        --config_file )
+            CONFIG_FILE="${2}"; shift 2 ;;
+        --batch_script )
+            BATCH_SCRIPT="${2}"; shift 2 ;;
+        --job_name )
+            JOB_NAME="${2}"; shift 2 ;;
+        --items_list_file )
+            ITEMS_LIST_FILE="${2}"; shift 2 ;;
+        --processing_script )
+            PROCESSING_SCRIPT="${2}"; shift 2 ;;
+        --file_param )
+            file_param="${2}"; shift 2 ;;
+        --completion_dir )
+            completion_dir="${2}"; shift 2 ;;
+        --regenerate_all )
+            regenerate_all="${2}"; shift 2 ;;
+        --)
+            shift; break;;
+        * )
+            echo "Invalid argument ${1} ${2}" >&2
+            exit 1
+    esac
+done
+
+ADDITIONAL_PARAMS=("$@")
 
 # Source the config file
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" || { echo "Error: Config file $CONFIG_FILE not found!"; exit 1; }
 
-# Determine the processing script from the first additional parameter; require it to be provided
-if [[ $# -lt 1 ]]; then
-    echo "Error: processing_script not provided. Usage: submit_batch_jobs.sh <config_file> <batch_script> <job_name> <processing_script> [additional_params...]"
-    exit 1
-fi
-PROCESSING_SCRIPT="${1}"
-shift 1  # Shift off processing script, leaving only its parameters in "$@"
+# Set defaults for variables that might not be in config
+num_parallel=${num_parallel:-1}
+max_array_size=${max_array_size:-1000}
 
-# General get_files_to_process function based on file_type
-get_files_to_process() {
-    case "${file_type:-bam_files}" in
-        "bam_files")
-            # Get all bam files from input directory
-            input_path="${input_dir:-${bam_dir:-${realign_bam_dir}}}"
-            file_pattern="${file_pattern:-Aligned.sortedByCoord.out.patched.v11md.bam$}"
-            
-            # Get all matching files using ls + grep
-            bam_dir_bam_list=$(ls "$input_path" | grep "${file_pattern}")
-            
-            # Filter to only those in gtex_ids if specified
-            if [ -n "${gtex_ids:-}" ]; then
-                full_bam_list=$(grep -F -f "$gtex_ids" <<< "$bam_dir_bam_list")
-            else
-                full_bam_list="$bam_dir_bam_list"
-            fi
-            original_count=$(echo "$full_bam_list" | wc -l)
-            echo "Original sample count: ${original_count}" >&2
-            
-            # Determine which files to process based on regenerate_all setting
-            if [ "${regenerate_all:-false}" = true ]; then
-                # Process all files
-                echo "$full_bam_list" | sed "s|^|${input_path}/|"
-            else
-                # Only process files that don't have completion markers
-                completion_dir="${output_dir}/completed/${completion_subdir:-${JOB_NAME}}"
-                # Use find + grep -v for bulk file checking
-                echo "$full_bam_list" | grep -v -F -f <(find "$completion_dir" -name "*.completed" -exec basename {} \; | sed 's|\.completed$||') | sed "s|^|${input_path}/|"
-            fi
-            ;;
-        "ld_regions")
-            # Process LD regions from BED file
-            if [ -n "${ld_blocks_bed:-}" ]; then
-                # Write a padded TSV (1-based inclusive) from the BED
-                padded_ld_blocks_tsv="${output_dir:-${out_dir}}/padded_ld_blocks.tsv"
-                awk -v PAD="${padding:-0}" -F '\t' '
-                  NF>=3 && $2 ~ /^[0-9]+$/ && $3 ~ /^[0-9]+$/ {
-                    chrom=$1; sub(/^chr/,"",chrom);
-                    from1=$2+1; to1=$3;
-                    pf=(from1>PAD? from1-PAD:1);
-                    pt=to1+PAD;
-                    printf "%s\t%d\t%d\n", chrom, pf, pt;
-                  }
-                ' "$ld_blocks_bed" > "$padded_ld_blocks_tsv"
-                
-                original_count=$(wc -l < "${padded_ld_blocks_tsv}")
-                echo "Original region count: ${original_count}" >&2
-                
-                if [ "${regenerate_all:-false}" = true ]; then
-                    cat "$padded_ld_blocks_tsv"
-                else
-                    # Find existing files and use grep -v for bulk filtering
-                    regions_to_process_tsv="${output_dir:-${out_dir}}/regions_to_process.tsv"
-                    rm -f "$regions_to_process_tsv"
-                    
-                    # Use find + grep -v for bulk file checking
-                    cat "$padded_ld_blocks_tsv" | grep -v -F -f <(find "${output_dir:-${out_dir}}" -name "LD_chr*.ld.gz" -exec basename {} \; | sed 's|LD_chr\([0-9]*\)_\([0-9]*\)_\([0-9]*\)\.ld\.gz|\1\t\2\t\3|') > "$regions_to_process_tsv"
-                    cat "$regions_to_process_tsv" 2>/dev/null || true
-                fi
-            else
-                echo "Error: ld_blocks_bed not specified for ld_regions file_type"
-                exit 1
-            fi
-            ;;
-        "participants")
-            # Process participants from participant list
-            if [ -n "${participant_id_list:-}" ]; then
-                # Check for duplicates
-                if [ $(sort "${participant_id_list}" | uniq -d | wc -l) -gt 0 ]; then
-                    echo "Error: Duplicate entries found in ${participant_id_list}:"
-                    sort "${participant_id_list}" | uniq -d
-                    exit 1
-                fi
-                
-                if [ "${regenerate_all:-false}" = true ]; then
-                    cat "${participant_id_list}"
-                else
-                    # Find existing files and use grep -v for bulk filtering
-                    new_participant_list="${output_dir}/participants_to_process.txt"
-                    > "${new_participant_list}"
-                    
-                    # Find all existing participant files and extract participant IDs
-                    existing_participants=$(find "$output_dir" -name "*.snps.vcf.gz" -exec basename {} \; | sed 's|\.snps\.vcf\.gz$||' | sort -u)
-                    
-                    # Use grep -v for bulk filtering
-                    cat "${participant_id_list}" | grep -v -F -f <(echo "$existing_participants") > "${new_participant_list}"
-                    cat "${new_participant_list}"
-                fi
-            else
-                echo "Error: participant_id_list not specified for participants file_type"
-                exit 1
-            fi
-            ;;
-        "tissues")
-            # Process tissues from tissue list
-            if [ -n "${tissue_id_list:-}" ]; then
-                cat "${tissue_id_list}"
-            else
-                echo "Error: tissue_id_list not specified for tissues file_type"
-                exit 1
-            fi
-            ;;
-        "ld_regions_string")
-            # Process LD regions as region strings (for coloc)
-            if [ -n "${ld_region_list:-}" ]; then
-                ld_regions=$(awk 'NR>1 {printf "%s:%d-%d\n", $1, $2+1, $3}' "${ld_region_list}")
-                total_count=$(wc -l < "${ld_region_list}")
-                
-                if [ "${regenerate_all:-FALSE}" = "TRUE" ] || [ "${regenerate_all:-FALSE}" = "true" ]; then
-                    echo "$ld_regions"
-                else
-                    # Find existing completion files and use grep -v for bulk filtering
-                    completion_dir="${output_dir}/completed"
-                    # Use find + grep -v for bulk file checking
-                    echo "$ld_regions" | grep -v -F -f <(find "$completion_dir" -name "*.completed" -exec basename {} \; | sed 's|\.completed$||')
-                fi
-            else
-                echo "Error: ld_region_list not specified for ld_regions_string file_type"
-                exit 1
-            fi
-            ;;
-        *)
-            echo "Error: Unknown file_type '${file_type}'. Supported types: bam_files, ld_regions, participants, tissues, ld_regions_string"
-            exit 1
-            ;;
-    esac
-}
+# Get items to process, filtering out completed items unless regenerate_all is true
+all_items=$(cat "${ITEMS_LIST_FILE}")
 
-# Check if files_to_process is empty
-files_to_process=$(get_files_to_process)
-if [ -z "$files_to_process" ]; then
-    echo "To be processed: 0"
-    echo "All files processed"
-    exit 0
+if [ "${regenerate_all}" = "true" ] || [ "${regenerate_all}" = "TRUE" ]; then
+    items_to_process="$all_items"
 else
-    # Count files to process
-    to_process_count=$(echo "$files_to_process" | wc -l)
+    check_dir="${completion_dir:-${output_dir}/completed/${JOB_NAME}}"
+    completed_items=$(find "${check_dir}" -name "*.completed" -exec basename {} \; 2>/dev/null | sed 's|\.completed$||')
     
-    # Calculate original count for display (this is a bit hacky but works)
-    case "${file_type:-bam_files}" in
-        "bam_files")
-            # Reuse the same logic as in get_files_to_process for consistency
-            input_path="${input_dir:-${bam_dir:-${realign_bam_dir}}}"
-            file_pattern="${file_pattern:-Aligned.sortedByCoord.out.patched.v11md.bam$}"
-            
-            bam_dir_bam_list=$(ls "$input_path" | grep "${file_pattern}")
-            if [ -n "${gtex_ids:-}" ]; then
-                full_bam_list=$(grep -F -f "$gtex_ids" <<< "$bam_dir_bam_list")
-            else
-                full_bam_list="$bam_dir_bam_list"
-            fi
-            original_count=$(echo "$full_bam_list" | wc -l)
-            ;;
-        *)
-            # For other types, we can't easily calculate original count
-            original_count=$to_process_count
-            ;;
-    esac
-    
-    completed_count=$((original_count - to_process_count))
-    echo "Already completed: ${completed_count}"
-    echo "To be processed: ${to_process_count}"
-    
-    # Calculate batch configuration to fit within max_array_size constraint
-    # Each array job processes: num_parallel files per step
-    
-    # Calculate minimum files per job to stay within max_array_size limit
-    num_series=$(( (to_process_count + max_array_size - 1) / max_array_size ))
-    num_series=$(( (num_series + num_parallel - 1) / num_parallel ))
-    echo "Configured series steps per job: ${num_series}"
-    
-    # Calculate number of sequential steps per job
-    num_batches=$(( (to_process_count + num_parallel * num_series - 1) / (num_parallel * num_series) ))
-    echo "Configured array jobs: ${num_batches}"
-    echo "Configured parallel files per step: ${num_parallel}"
-    echo "Total files per array job: $((num_parallel * num_series))"
+    if [ -n "$completed_items" ]; then
+        items_to_process=$(echo "$all_items" | grep -v -F -f <(echo "$completed_items"))
+    else
+        items_to_process="$all_items"
+    fi
 fi
 
-# Create batch files for SLURM array processing
+if [ -z "$items_to_process" ]; then
+    echo "To be processed: 0"
+    echo "All items processed"
+    exit 0
+fi
+
+to_process_count=$(echo "$items_to_process" | wc -l)
+original_count=$(grep -v '^$' "${ITEMS_LIST_FILE}" | wc -l)
+completed_count=$((original_count - to_process_count))
+
+num_series=$(( (to_process_count + max_array_size - 1) / max_array_size ))
+num_series=$(( (num_series + num_parallel - 1) / num_parallel ))
+num_batches=$(( (to_process_count + num_parallel * num_series - 1) / (num_parallel * num_series) ))
+final_items_per_batch=$(( (to_process_count + num_batches - 1) / num_batches ))
+
+echo "Completed: ${completed_count}/${original_count}, To process: ${to_process_count}/${original_count}"
+echo "Array jobs: ${num_batches} array jobs with ${final_items_per_batch} items per batch, ${num_parallel} parallel jobs * ${num_series} series jobs"
+
+# Create batch files
 file_list_folder="$output_dir/file_lists/file_lists_${JOB_NAME}"
 rm -rf "${file_list_folder}"
 mkdir -p "${file_list_folder}"
 
-# Calculate files per batch file to distribute all files evenly
-final_files_per_batch=$(( (to_process_count + num_batches - 1) / num_batches ))
-echo "Final files per batch file: ${final_files_per_batch}"
+echo "$items_to_process" | split -l "${final_items_per_batch}" --additional-suffix=".txt" - "${file_list_folder}/file_list_"
 
-# Split files into batch files
-echo "$files_to_process" | split -l "${final_files_per_batch}" --additional-suffix=".txt" - "${file_list_folder}/file_list_"
-
-# Create list of batch file paths for SLURM array
 file_list_paths="${output_dir}/file_lists/file_list_paths_${JOB_NAME}.txt"
 rm -rf "${file_list_paths}"
 printf "%s\n" "${file_list_folder}"/* > "${file_list_paths}"
 
 echo "Batches created: ${num_batches}"
-ideal_array_jobs=$(( (to_process_count + num_parallel * num_series - 1) / (num_parallel * num_series) ))
-echo "Ideal array jobs needed: ${ideal_array_jobs}"
-echo "Actual array jobs created: ${num_batches}"
 
 # Configure SLURM job parameters
 sbatch_params=(
@@ -232,14 +113,15 @@ sbatch_params=(
     --time "${job_time:-12:00:00}"
     --mem "${job_mem:-256G}"
     --job-name "${JOB_NAME}_batch"
-    "${BATCH_SCRIPT}"
-    "${file_list_paths}"
-    "${num_parallel}"
-    "${PROCESSING_SCRIPT}"
-    "$@"  # Pass through additional parameters for the processing script
+    "${BATCH_SCRIPT}" \
+    --file_list_paths "${file_list_paths}" \
+    --num_parallel "${num_parallel}" \
+    --processing_script "${PROCESSING_SCRIPT}" \
+    --file_param "${file_param:---bam_file}" \
+    -- \
+    "${ADDITIONAL_PARAMS[@]}"
 )
 
-# Add any additional SLURM parameters from config
 if [ -n "${job_partition:-}" ]; then
     sbatch_params+=(--partition "${job_partition}")
 fi
@@ -253,49 +135,33 @@ if [ -n "${job_tmp:-}" ]; then
     sbatch_params+=(--tmp "${job_tmp}")
 fi
 
-# Check if job requires long QOS (time > 2 days)
-# Time format can be: HH:MM:SS or D-HH:MM:SS
+# Check if job requires long QOS
 is_long_job=false
 job_time_value="${job_time:-12:00:00}"
 if [[ "$job_time_value" =~ ^[0-9]+- ]]; then
-    # Time is in days format (e.g., 3-00:00:00)
     days=$(echo "$job_time_value" | cut -d'-' -f1)
     if [ "$days" -gt 2 ]; then
         is_long_job=true
     fi
 elif [[ "$job_time_value" =~ ^[0-9]+:[0-9]+:[0-9]+$ ]]; then
-    # Time is in HH:MM:SS format
     hours=$(echo "$job_time_value" | cut -d':' -f1)
     if [ "$hours" -gt 48 ]; then
         is_long_job=true
     fi
 fi
 
-# Submit job array to cluster
+# Submit job array
 if [ "${submit_on}" = 'sherlock' ]; then
-    # Additional parameters for sherlock
-    sherlock_params=(
-        --tmp 200G
-    )
-
-    # Use sfgf partition for long jobs, normal,owners for short jobs (excluding pritch)
+    sherlock_params=(--tmp 200G)
     if [ "$is_long_job" = true ]; then
         sherlock_params+=(--partition sfgf,biochem)
     else
         sherlock_params+=(--partition normal,owners)
     fi
     sherlock_params+=(--exclude pritch)
-
-    sbatch \
-        "${sherlock_params[@]}" \
-        "${sbatch_params[@]}"
+    sbatch "${sherlock_params[@]}" "${sbatch_params[@]}"
 elif [ "${submit_on}" = 'scg' ]; then
-    # Additional parameters for scg
-    sbatch \
-        --account smontgom \
-        --partition batch \
-        --constraint "nvme" \
-        "${sbatch_params[@]}"
+    sbatch --account smontgom --partition batch --constraint "nvme" "${sbatch_params[@]}"
 else
     echo "must submit on either 'sherlock' or 'scg'"
 fi

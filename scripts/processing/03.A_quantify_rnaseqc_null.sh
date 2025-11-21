@@ -28,12 +28,14 @@ options_array=(
     local_reference_dir
     output_dir
     code_dir
-    bam_file
+    sample_id
+    bam_dir
     reference_fasta
     chr_sizes
     genes_gtf
     intervals_bed
     bam_file_end
+    completion_dir
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -55,8 +57,10 @@ while true; do
             output_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --bam_file )
-            bam_file="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
+        --sample_id )
+            sample_id="${2}"; shift 2 ;;
+        --bam_dir )
+            bam_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
         --reference_fasta )
             reference_fasta="${2}"; shift 2 ;;
         --chr_sizes )
@@ -67,6 +71,8 @@ while true; do
             intervals_bed="${2}"; shift 2 ;;
         --bam_file_end )
             bam_file_end="${2}"; shift 2 ;;
+        --completion_dir )
+            completion_dir="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -78,10 +84,16 @@ done
 # activate the pixi enviroment
 source <(pixi shell-hook --environment quantifybam --manifest-path ${code_dir}/pixi.toml)
 
-# get sample id from file name
-sample_id=$(basename $(echo ${bam_file} | sed "s/.${bam_file_end}//"))
-participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
+# Construct BAM file path from bam_dir, sample_id, and bam_file_end
+bam_file="${bam_dir}/${sample_id}.${bam_file_end}"
 
+# Check that BAM file exists
+if [[ ! -f ${bam_file} ]]; then
+    echo "Error: BAM file ${bam_file} does not exist."
+    exit 1
+fi
+
+participant_id=$(echo ${sample_id} | cut -d '-' -f1,2)
 
 # make tmp dir
 dir_prefix=${TMPDIR}/${sample_id}
@@ -113,7 +125,7 @@ mkdir -p ${output_dir}/rnaseqc_null/
 rsync -Prhltv ${dir_prefix}/output/rnaseqc_null/* ${output_dir}/rnaseqc_null/
 
 # Create completion marker
-completion_dir="${output_dir}/completed/rnaseqc_null"
+completion_dir="${completion_dir:-${output_dir}/completed/rnaseqc_null}"
 mkdir -p "${completion_dir}"
 completion_file="${completion_dir}/${sample_id}.completed"
 echo "Processing completed successfully for sample: ${sample_id}" > "${completion_file}"

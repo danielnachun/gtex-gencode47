@@ -26,8 +26,8 @@ options_array=(
     sample_ids
     output_dir
     code_dir
-    regions_bed
     regenerate
+    region
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -46,10 +46,10 @@ while true; do
             output_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
-        --regions_bed )
-            regions_bed="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --regenerate )
             regenerate="${2}"; shift 2 ;;
+        --region )
+            region="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -61,15 +61,17 @@ done
 # activate the pixi enviroment
 source <(pixi shell-hook --environment plink --manifest-path ${code_dir}/pixi.toml)
 
-# map job id to line number and then to region
-line_number=${SLURM_ARRAY_TASK_ID}
 
-# pull chr, from_bp, to_bp from the line of the regions_bed
-region="$(sed "${line_number}q; d" "${regions_bed}")" 
 echo "Processing region: ${region}"
-chr_id=$(echo "${region}" | cut -f 1)
-from_bp=$(echo "${region}" | cut -f 2)
-to_bp=$(echo "${region}" | cut -f 3)
+# Parse region string format: chr:start-end (1-based inclusive)
+# Example: chr1:1000-2000 or 1:1000-2000
+chr_id=$(echo "${region}" | cut -d':' -f 1)
+region_range=$(echo "${region}" | cut -d':' -f 2)
+from_bp=$(echo "${region_range}" | cut -d'-' -f 1)
+to_bp=$(echo "${region_range}" | cut -d'-' -f 2)
+
+# Remove "chr" prefix if present for PLINK
+chr_id=$(echo "$chr_id" | sed 's/^chr//')
 
 out_file="${output_dir}/LD_chr${chr_id}_${from_bp}_${to_bp}.ld.gz"
 echo "Checking for ${out_file}"
@@ -86,5 +88,14 @@ else
         --to_bp "$to_bp" \
         --output_dir "$output_dir"
 fi
+
+# Create completion marker using normalized region string for filesystem safety
+# Normalize the region string to handle colons and other special characters
+completion_dir="${output_dir}/completed"
+mkdir -p "${completion_dir}"
+normalized_region=$(echo "$region" | tr '\t' '_' | tr '\n' ' ' | sed 's/[:/]/_/g' | tr -d '\r' | sed 's/  */_/g' | sed 's/^_\|_$//g')
+completion_file="${completion_dir}/${normalized_region}.completed"
+echo "Processing completed successfully for region: ${region}" > "${completion_file}"
+echo "Completion marker created: ${completion_file}"
 
 echo $(date +"[%b %d %H:%M:%S] Done")

@@ -1,5 +1,5 @@
 # sample args
-realign_bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/raw/GTEx_Analysis_2022-06-06_v10_RNAseq_BAM_files
+bam_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/raw/GTEx_Analysis_2022-06-06_v10_RNAseq_BAM_files
 gtex_ids=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/other_references/caudate/caudate_samples.txt
 reference_dir=/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/realign_references
 reference_fasta=Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta

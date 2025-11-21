@@ -22,10 +22,10 @@ check_for_directory() {
 }
 
 options_array=(
-    participant_id_list
     full_vcf
     output_dir
     code_dir
+    participant_id
 )
 
 longoptions=$(echo "${options_array[@]}" | sed -e 's/ /:,/g' | sed -e 's/$/:/')
@@ -36,14 +36,14 @@ eval set -- "${arguments}"
 
 while true; do
     case "${1}" in
-        --participant_id_list )
-            participant_id_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --full_vcf )
             full_vcf="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir )
             output_dir="${2}"; shift 2 ;;
         --code_dir )
             code_dir="${2}"; check_for_directory "${1}" "${2}"; shift 2 ;;
+        --participant_id )
+            participant_id="${2}"; shift 2 ;;
         --)
             shift; break;;
         * )
@@ -55,11 +55,6 @@ done
 # activate the pixi enviroment
 source <(pixi shell-hook --environment extractvcf --manifest-path ${code_dir}/pixi.toml)
 
-
-# map job id to line number and then to participant id
-line_number=${SLURM_ARRAY_TASK_ID}
-participant_id="$(sed "${line_number}q; d" "${participant_id_list}")"
-
 echo $(date +"[%b %d %H:%M:%S] Generating participant VCF (SNPs only)")
 # select SNPs, filter out missing sites
 bcftools view --no-update -s ${participant_id} -v snps ${full_vcf} -Ou | bcftools view --no-update -e 'GT=".|."' -Oz -o ${output_dir}/${participant_id}.snps.vcf.gz
@@ -68,5 +63,12 @@ tabix ${output_dir}/${participant_id}.snps.vcf.gz
 echo $(date +"[%b %d %H:%M:%S] Subsetting biallelic het sites for ASE")
 bcftools view --no-update -i 'GT="het"' ${output_dir}/${participant_id}.snps.vcf.gz -Ou | bcftools norm -m+ -Ou | bcftools view -m2 -M2 -Oz -o ${output_dir}/${participant_id}.snps.het.vcf.gz
 tabix ${output_dir}/${participant_id}.snps.het.vcf.gz
+
+# Create completion marker
+completion_dir="${output_dir}/completed/extract_participant_vcfs"
+mkdir -p "${completion_dir}"
+completion_file="${completion_dir}/${participant_id}.completed"
+echo "Processing completed successfully for participant: ${participant_id}" > "${completion_file}"
+echo "Completion marker created: ${completion_file}"
 
 echo $(date +"[%b %d %H:%M:%S] Done")

@@ -16,7 +16,4 @@ job_mem=128G
 submit_on=scg
 
 # File processing configuration
-file_type=bam_files
-input_dir=${bam_dir}
 file_pattern=Aligned.sortedByCoord.out.patched.v11md.bam$
-completion_subdir=realign

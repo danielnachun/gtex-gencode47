@@ -11,7 +11,6 @@ ld_meta="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr_refere
 gwas_column_matching="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr_references/gwas_column_matching.txt"
 all_v39_genes_path="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/data/pecotmr_references/v39_genes.txt"
 region_padding=1000000
-association_padding=0
 output_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/coloc"
 code_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing"
 regenerate_all=FALSE
