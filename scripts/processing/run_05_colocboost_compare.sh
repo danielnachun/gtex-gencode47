@@ -35,6 +35,7 @@ options_array=(
     gene_bed_list
     covariate_list
     covariate_path
+    conditions_list_individual
     genotype_stem
     v39_gene_id_path
     output_dir
@@ -46,7 +47,6 @@ options_array=(
     ld_meta
     gwas_column_matching
     # Analysis mode flags
-    multi_tissue
     run_v39
     run_individual
     run_xqtl_only
@@ -75,6 +75,7 @@ while true; do
         --gene_bed_list ) gene_bed_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --covariate_list ) covariate_list="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --covariate_path ) covariate_path="${2}"; shift 2 ;;
+        --conditions_list_individual ) conditions_list_individual="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --genotype_stem ) genotype_stem="${2}"; shift 2 ;;
         --v39_gene_id_path ) v39_gene_id_path="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --output_dir ) output_dir="${2}"; shift 2 ;;
@@ -86,7 +87,6 @@ while true; do
         --ld_meta ) ld_meta="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         --gwas_column_matching ) gwas_column_matching="${2}"; check_for_file "${1}" "${2}"; shift 2 ;;
         # Analysis mode flags
-        --multi_tissue ) multi_tissue="${2}"; shift 2 ;;
         --run_v39 ) run_v39="${2}"; shift 2 ;;
         --run_individual ) run_individual="${2}"; shift 2 ;;
         --run_xqtl_only ) run_xqtl_only="${2}"; shift 2 ;;
@@ -103,7 +103,6 @@ while true; do
 done
 
 # Set default values
-multi_tissue=${multi_tissue:-FALSE}
 run_v39=${run_v39:-FALSE}
 run_individual=${run_individual:-FALSE}
 run_xqtl_only=${run_xqtl_only:-FALSE}
@@ -137,6 +136,7 @@ r_command="${code_dir}/colocboost_compare.R \
     --phenotype_list ${gene_bed_list} \
     --covariate_list ${covariate_list} \
     --covariate_path ${covariate_path} \
+    --conditions_list_individual ${conditions_list_individual} \
     --output_dir ${output_dir} \
     --maf_cutoff ${maf_cutoff} \
     --mac_cutoff ${mac_cutoff} \
@@ -144,7 +144,10 @@ r_command="${code_dir}/colocboost_compare.R \
     --imiss_cutoff ${imiss_cutoff} \
     --run_individual ${run_individual} \
     --run_v39 ${run_v39} \
-    --v39_gene_id_path ${v39_gene_id_path}"
+    --v39_gene_id_path ${v39_gene_id_path} \
+    --run_xqtl_only ${run_xqtl_only} \
+    --run_separate_gwas ${run_separate_gwas} \
+    --run_joint_gwas ${run_joint_gwas}"
 
 # Add GWAS-specific parameters if running GWAS analysis
 if [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] || [ "${run_joint_gwas}" = "TRUE" ] || [ "${run_joint_gwas}" = "true" ]; then
@@ -155,15 +158,6 @@ if [ "${run_separate_gwas}" = "TRUE" ] || [ "${run_separate_gwas}" = "true" ] ||
         --ld_meta ${ld_meta} \
         --gwas_column_matching ${gwas_column_matching}"
 fi
-
-# Add analysis mode flags to R script
-r_command="${r_command} \
-    --multi_tissue ${multi_tissue} \
-    --run_v39 ${run_v39} \
-    --run_individual ${run_individual} \
-    --run_xqtl_only ${run_xqtl_only} \
-    --run_separate_gwas ${run_separate_gwas} \
-    --run_joint_gwas ${run_joint_gwas}"
 
 # Execute the R script
 eval "${r_command}"

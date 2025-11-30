@@ -18,10 +18,9 @@ output_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/output/eqtl_colo
 code_dir="/oak/stanford/groups/smontgom/dnachun/data/gtex/v10/scripts/processing"
 regenerate_all=FALSE
 num_parallel=1
-max_array_size=3
-job_time=10:00
+max_array_size=1000
+job_time=48:00:00
 job_mem=256G
-job_cpus=8
 submit_on=sherlock
 
 

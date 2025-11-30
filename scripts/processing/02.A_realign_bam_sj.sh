@@ -143,10 +143,10 @@ else
         --tmp_dir ${dir_prefix}/output/star
 fi
 
-ls ${dir_prefix}/output/star
 
 # copy out all result files except the sorted BAM and its index, handle gzipped & non-gzipped files
 echo "Copying out results"
+mkdir -p "${output_dir}/star"
 for ext in Aligned.toTranscriptome.out.bam \
            Chimeric.out.junction \
            Chimeric.out.junction.gz \
@@ -161,7 +161,7 @@ for ext in Aligned.toTranscriptome.out.bam \
 do
     file_path="${dir_prefix}/output/star/${sample_id}.${ext}"
     if [[ -e "${file_path}" ]]; then
-        rsync -Prhltv "${file_path}" "${output_dir}"
+        rsync -Prhltv "${file_path}" "${output_dir}/star"
     else
         echo "Warning: ${file_path} not found. Skipping."
     fi

@@ -64,7 +64,8 @@ if [ "${regenerate_all}" = "true" ] || [ "${regenerate_all}" = "TRUE" ]; then
     items_to_process="$all_items"
 else
     check_dir="${completion_dir:-${output_dir}/completed/${JOB_NAME}}"
-    completed_items=$(find "${check_dir}" -name "*.completed" -exec basename {} \; 2>/dev/null | sed 's|\.completed$||')
+    # Faster: use find with -printf to extract basename without .completed extension
+    completed_items=$(find "${check_dir}" -name "*.completed" -type f -printf '%f\n' 2>/dev/null | sed 's|\.completed$||')
     
     if [ -n "$completed_items" ]; then
         items_to_process=$(echo "$all_items" | grep -v -F -f <(echo "$completed_items"))

@@ -14,11 +14,12 @@ parser <- argparser::arg_parser("Script to run colocboost") |>
     argparser::add_argument("--phenotype_list", help = "Path to list of phenotypes to analyze, one path per line") |>
     argparser::add_argument("--covariate_path", help = "Path to covariates file", default = NULL) |>
     argparser::add_argument("--covariate_list", help = "Optional path to list of covariate files, one per phenotype", default = NULL) |>
-    argparser::add_argument("--gwas_id_list", help = "Path to list of GWAS IDs to analyze, one per line") |>
-    argparser::add_argument("--gwas_phenotype_list", help = "Path to list of GWAS phenotypes to analyze, one path per line") |>
-    argparser::add_argument("--gwas_meta", help = "Path to GWAS metadata file") |>
-    argparser::add_argument("--ld_meta", help = "Path to LD metadata file") |>
-    argparser::add_argument("--gwas_column_matching", help = "Path to GWAS column matching file") |>
+    argparser::add_argument("--conditions_list_individual", help = "Path to list of condition names for individual-level data, one per line (must match phenotype_list length)") |>
+    argparser::add_argument("--gwas_id_list", help = "Path to list of GWAS IDs to analyze, one per line", default = NULL) |>
+    argparser::add_argument("--gwas_phenotype_list", help = "Path to list of GWAS phenotypes to analyze, one path per line", default = NULL) |>
+    argparser::add_argument("--gwas_meta", help = "Path to GWAS metadata file", default = NULL) |>
+    argparser::add_argument("--ld_meta", help = "Path to LD metadata file", default = NULL) |>
+    argparser::add_argument("--gwas_column_matching", help = "Path to GWAS column matching file", default = NULL) |>
     argparser::add_argument("--output_dir", help = "Output directory for results") |>
     argparser::add_argument("--maf_cutoff", help = "Minor allele frequency cutoff", default = 0.01) |>
     argparser::add_argument("--mac_cutoff", help = "Minor allele count cutoff", default = 0) |>
@@ -28,14 +29,14 @@ parser <- argparser::arg_parser("Script to run colocboost") |>
     argparser::add_argument("--run_v39", help = "Run v39 genes analysis", default = FALSE) |>
     argparser::add_argument("--v39_gene_id_path", help = "Path to list of v39 gene IDs, one per line", default = NULL) |>
     # New analysis mode flags (aliases)
-    argparser::add_argument("--run_xqtl", help = "Enable xQTL coloc analysis", default = FALSE) |>
+    argparser::add_argument("--run_xqtl_only", help = "Enable xQTL coloc analysis", default = FALSE) |>
     argparser::add_argument("--run_separate_gwas", help = "Enable separate GWAS analysis", default = FALSE) |>
     argparser::add_argument("--run_seperate_gwas", help = "Alias for --run_separate_gwas", default = FALSE) |>
-    argparser::add_argument("--run_join_gwas", help = "Alias for --run_joint_gwas", default = FALSE)
+    argparser::add_argument("--run_joint_gwas", help = "Enable joint GWAS analysis", default = FALSE)
 
 parsed_args <- argparser::parse_args(parser)
 
-DEBUG <- FALSE
+DEBUG <- TRUE
 
 tissue_id         <- parsed_args$tissue_id
 gene_region       <- parsed_args$gene_region
@@ -48,15 +49,6 @@ if (length(phenotype_list) == 0 || all(phenotype_list == "")) {
     quit(status = 0)
 }
 
-gwas_id_list <- readLines(parsed_args$gwas_id_list)
-gwas_phenotype_list <- readLines(parsed_args$gwas_phenotype_list)
-gwas_meta           <- parsed_args$gwas_meta
-ld_meta             <- parsed_args$ld_meta
-gwas_column_matching <- parsed_args$gwas_column_matching
-
-covariate_path    <- parsed_args$covariate_path
-covariate_list_path <- parsed_args$covariate_list
-
 # Normalize optional args: treat "none" or empty string as NULL
 normalize_opt <- function(x) {
     if (is.null(x)) return(NULL)
@@ -65,8 +57,12 @@ normalize_opt <- function(x) {
     if (tolower(x) == "none") return(NULL)
     x
 }
+
+covariate_path    <- parsed_args$covariate_path
+covariate_list_path <- parsed_args$covariate_list
 covariate_path <- normalize_opt(covariate_path)
 covariate_list_path <- normalize_opt(covariate_list_path)
+
 variant_region    <- parsed_args$variant_region
 ld_region         <- parsed_args$ld_region
 output_dir       <- parsed_args$output_dir
@@ -79,9 +75,32 @@ run_v39           <- parsed_args$run_v39
 v39_gene_id_path  <- parsed_args$v39_gene_id_path
 
 # New derived analysis flags from aliases
-run_xqtl           <- isTRUE(parsed_args$run_xqtl)
+run_xqtl_only           <- isTRUE(parsed_args$run_xqtl_only)
 run_separate_gwas  <- isTRUE(parsed_args$run_separate_gwas) || isTRUE(parsed_args$run_seperate_gwas)
-run_joint_gwas     <- isTRUE(parsed_args$run_join_gwas) # alias only; no primary flag existed in this version
+run_joint_gwas     <- isTRUE(parsed_args$run_joint_gwas)
+
+# Read required conditions_list_individual
+conditions_list_individual_path <- parsed_args$conditions_list_individual
+gwas_id_list_path <- normalize_opt(parsed_args$gwas_id_list)
+gwas_phenotype_list_path <- normalize_opt(parsed_args$gwas_phenotype_list)
+gwas_meta           <- normalize_opt(parsed_args$gwas_meta)
+ld_meta             <- normalize_opt(parsed_args$ld_meta)
+gwas_column_matching <- normalize_opt(parsed_args$gwas_column_matching)
+
+# Only read GWAS files if GWAS analysis is enabled
+if (run_separate_gwas || run_joint_gwas) {
+    if (is.null(gwas_id_list_path)) {
+        stop("gwas_id_list is required when running GWAS analysis")
+    }
+    if (is.null(gwas_phenotype_list_path)) {
+        stop("gwas_phenotype_list is required when running GWAS analysis")
+    }
+    gwas_id_list <- readLines(gwas_id_list_path)
+    gwas_phenotype_list <- readLines(gwas_phenotype_list_path)
+} else {
+    gwas_id_list <- character(0)
+    gwas_phenotype_list <- character(0)
+}
 
 # Read v39 gene IDs from file if path is provided
 if (!is.null(v39_gene_id_path)) {
@@ -117,7 +136,7 @@ cat("  imiss_cutoff:", imiss_cutoff, "\n")
 cat("  run_individual:", run_individual, "\n")
 cat("  run_v39:", run_v39, "\n")
 cat("  v39_gene_id_path:", v39_gene_id_path, "\n")
-cat("  run_xqtl:", run_xqtl, "\n")
+cat("  run_xqtl_only:", run_xqtl_only, "\n")
 cat("  run_separate_gwas:", run_separate_gwas, "\n")
 cat("  run_joint_gwas:", run_joint_gwas, "\n")
 
@@ -150,25 +169,33 @@ if (!dir.exists(output_dir)) {
 # Format GWAS Data
 # ===========================
 
-# Read the GWAS metadata file
-gwas_meta_df <- read.delim(gwas_meta, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-
-# Ensure the Tag column is character
-gwas_meta_df$Tag <- as.character(gwas_meta_df$Tag)
-
-# Match rows for each GWAS in gwas_id_list, preserving order
-gwas_meta_matched <- gwas_meta_df[match(gwas_id_list, gwas_meta_df$Tag), ]
-
-# Check for missing matches and warn if any
-if (any(is.na(gwas_meta_matched$Tag))) {
-    missing_tags <- gwas_id_list[is.na(gwas_meta_matched$Tag)]
-    warning("The following GWAS IDs were not found in the metadata: ", paste(missing_tags, collapse = ", "))
+# Only format GWAS data if GWAS analysis is enabled
+if (run_separate_gwas || run_joint_gwas) {
+    # Read the GWAS metadata file
+    gwas_meta_df <- read.delim(gwas_meta, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    
+    # Ensure the Tag column is character
+    gwas_meta_df$Tag <- as.character(gwas_meta_df$Tag)
+    
+    # Match rows for each GWAS in gwas_id_list, preserving order
+    gwas_meta_matched <- gwas_meta_df[match(gwas_id_list, gwas_meta_df$Tag), ]
+    
+    # Check for missing matches and warn if any
+    if (any(is.na(gwas_meta_matched$Tag))) {
+        missing_tags <- gwas_id_list[is.na(gwas_meta_matched$Tag)]
+        warning("The following GWAS IDs were not found in the metadata: ", paste(missing_tags, collapse = ", "))
+    }
+    
+    # Extract sample size, cases, and controls as numeric vectors
+    n_samples <- as.numeric(gwas_meta_matched$Sample_Size)
+    n_cases <- as.numeric(gwas_meta_matched$Cases)
+    n_controls <- as.numeric(gwas_meta_matched$Controls)
+} else {
+    # Set empty vectors for xQTL-only mode
+    n_samples <- numeric(0)
+    n_cases <- numeric(0)
+    n_controls <- numeric(0)
 }
-
-# Extract sample size, cases, and controls as numeric vectors
-n_samples <- as.numeric(gwas_meta_matched$Sample_Size)
-n_cases <- as.numeric(gwas_meta_matched$Cases)
-n_controls <- as.numeric(gwas_meta_matched$Controls)
 
 
 
@@ -182,37 +209,91 @@ if (is.null(covariate_list_path) && is.null(covariate_path)) {
     stop("You must provide either --covariate_list or --covariate_path")
 }
 
-# Define the path for saving/loading sumstat_data for this LD block
-sumstat_data_path <- file.path(output_dir, paste0(ld_region, ".sumstat_data.rds"))
+# Define the path for saving/loading sumstat_data for this LD block (only if GWAS analysis is enabled)
+sumstat_data_path <- if (run_separate_gwas || run_joint_gwas) {
+    file.path(output_dir, paste0(ld_region, ".sumstat_data.rds"))
+} else {
+    NULL
+}
 region_data_path <- file.path(output_dir, paste0(tissue_id, ".", ld_region, ".region_data.rds"))
 
-if (file.exists(sumstat_data_path)) {
-    # If sumstat_data already exists, load region_data and overwrite sumstat_data
-    cat("sumstat_data file exists for this LD block. Loading previous sumstat_data, and overwriting sumstat_data in region_data.\n")
-    region_data <- load_multitask_regional_data(
-        region = gene_region,
-        genotype_list = c(genotype_stem),
-        phenotype_list = phenotype_list,
-        covariate_list = if (!is.null(covariate_list_path)) {
-            cl <- readLines(covariate_list_path)
-            if (length(cl) != length(phenotype_list)) {
-                stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
-            }
-            cl
-        } else {
-            rep(covariate_path, length(phenotype_list))
-        },
-        region_name_col = 4,
-        maf_cutoff = maf_cutoff,
-        mac_cutoff = mac_cutoff,
-        xvar_cutoff = xvar_cutoff,
-        imiss_cutoff = imiss_cutoff,
-        association_window = variant_region
-    )
-    sumstat_data <- readRDS(sumstat_data_path)
-    region_data$sumstat_data <- sumstat_data
+# Read conditions_list_individual from file
+conditions_list_individual <- readLines(conditions_list_individual_path)
+if (length(conditions_list_individual) != length(phenotype_list)) {
+    stop("Length of conditions_list_individual (", length(conditions_list_individual), 
+         ") does not match phenotype_list (", length(phenotype_list), ")")
+}
+
+if (run_separate_gwas || run_joint_gwas) {
+    # Only handle sumstat_data if GWAS analysis is enabled
+    if (!is.null(sumstat_data_path) && file.exists(sumstat_data_path)) {
+        # If sumstat_data already exists, load region_data and overwrite sumstat_data
+        cat("sumstat_data file exists for this LD block. Loading previous sumstat_data, and overwriting sumstat_data in region_data.\n")
+        region_data <- load_multitask_regional_data(
+            region = gene_region,
+            genotype_list = c(genotype_stem),
+            phenotype_list = phenotype_list,
+            covariate_list = if (!is.null(covariate_list_path)) {
+                cl <- readLines(covariate_list_path)
+                if (length(cl) != length(phenotype_list)) {
+                    stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
+                }
+                cl
+            } else {
+                rep(covariate_path, length(phenotype_list))
+            },
+            conditions_list_individual = conditions_list_individual,
+            region_name_col = 4,
+            maf_cutoff = maf_cutoff,
+            mac_cutoff = mac_cutoff,
+            xvar_cutoff = xvar_cutoff,
+            imiss_cutoff = imiss_cutoff,
+            association_window = variant_region
+        )
+        sumstat_data <- readRDS(sumstat_data_path)
+        region_data$sumstat_data <- sumstat_data
+    } else {
+        # Load with GWAS data
+        region_data <- load_multitask_regional_data(
+            region = gene_region,
+            genotype_list = c(genotype_stem),
+            phenotype_list = phenotype_list,
+            covariate_list = if (!is.null(covariate_list_path)) {
+                cl <- readLines(covariate_list_path)
+                if (length(cl) != length(phenotype_list)) {
+                    stop("Length of covariate_list (", length(cl), ") does not match phenotype_list (", length(phenotype_list), ")")
+                }
+                cl
+            } else {
+                rep(covariate_path, length(phenotype_list))
+            },
+            conditions_list_individual = conditions_list_individual,
+            region_name_col = 4,
+            sumstat_path_list = gwas_phenotype_list,
+            column_file_path_list = rep(gwas_column_matching, length(gwas_phenotype_list)),
+            LD_meta_file_path_list = rep(ld_meta, length(gwas_phenotype_list)),
+            conditions_list_sumstat = gwas_id_list,
+            match_LD_sumstat = lapply(gwas_id_list, function(x) c(x)),
+            n_samples = n_samples,
+            n_cases = n_cases,
+            n_controls = n_controls,
+            maf_cutoff = maf_cutoff,
+            mac_cutoff = mac_cutoff,
+            xvar_cutoff = xvar_cutoff,
+            imiss_cutoff = imiss_cutoff,
+            association_window = variant_region
+        )
+        # Write out sumstat_data for this LD block
+        if (!is.null(region_data$sumstat_data)) {
+            saveRDS(region_data$sumstat_data, file = sumstat_data_path)
+        }
+        # Optionally, also save the full region_data for future use
+        if (DEBUG) {
+            saveRDS(region_data, file = region_data_path)
+        }
+    }
 } else {
-    # Load region data as usual
+    # Load without GWAS data (xQTL only)
     region_data <- load_multitask_regional_data(
         region = gene_region,
         genotype_list = c(genotype_stem),
@@ -226,23 +307,14 @@ if (file.exists(sumstat_data_path)) {
         } else {
             rep(covariate_path, length(phenotype_list))
         },
+        conditions_list_individual = conditions_list_individual,
         region_name_col = 4,
-        sumstat_path_list = gwas_phenotype_list,
-        column_file_path_list = rep(gwas_column_matching, length(gwas_phenotype_list)),
-        LD_meta_file_path_list = rep(ld_meta, length(gwas_phenotype_list)),
-        conditions_list_sumstat = gwas_id_list,
-        match_LD_sumstat = lapply(gwas_id_list, function(x) c(x)),
-        n_samples = n_samples,
-        n_cases = n_cases,
-        n_controls = n_controls,
         maf_cutoff = maf_cutoff,
         mac_cutoff = mac_cutoff,
         xvar_cutoff = xvar_cutoff,
         imiss_cutoff = imiss_cutoff,
         association_window = variant_region
     )
-    # Write out sumstat_data for this LD block
-    saveRDS(region_data$sumstat_data, file = sumstat_data_path)
     # Optionally, also save the full region_data for future use
     if (DEBUG) {
         saveRDS(region_data, file = region_data_path)
@@ -261,6 +333,10 @@ cat("Data loading completed in:", round(difftime(data_end_time, data_start_time,
 # Run Colocboost on All Genes
 # ===========================
 cat("\nStarting colocboost analysis on all genes...\n")
+cat("Analysis modes:\n")
+cat("  xqtl_coloc:", run_xqtl_only, "\n")
+cat("  joint_gwas:", run_joint_gwas, "\n")
+cat("  separate_gwas:", run_separate_gwas, "\n")
 analysis_start_time <- Sys.time()
 res <- colocboost_analysis_pipeline(
     region_data,
@@ -268,7 +344,7 @@ res <- colocboost_analysis_pipeline(
     pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
     qc_method = c("rss_qc"), 
     maf_cutoff=maf_cutoff, 
-    xqtl_coloc = run_xqtl,
+    xqtl_coloc = run_xqtl_only,
     joint_gwas = run_joint_gwas,
     separate_gwas = run_separate_gwas
 )
@@ -334,6 +410,10 @@ if (run_individual) {
         names(region_data_single$individual_data$X_variance) <- gene_name
         
         # Run colocboost analysis on single gene
+        cat("Analysis modes for individual gene analysis:\n")
+        cat("  xqtl_coloc:", run_xqtl_only, "\n")
+        cat("  joint_gwas:", run_joint_gwas, "\n")
+        cat("  separate_gwas:", run_separate_gwas, "\n")
         analysis_start_time <- Sys.time()
         res_single <- colocboost_analysis_pipeline(
             region_data_single,
@@ -341,7 +421,7 @@ if (run_individual) {
             pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
             qc_method = c("rss_qc"), 
             maf_cutoff=maf_cutoff, 
-            xqtl_coloc = run_xqtl,
+            xqtl_coloc = run_xqtl_only,
             joint_gwas = run_joint_gwas,
             separate_gwas = run_separate_gwas
         )
@@ -405,6 +485,10 @@ if (run_v39) {
         )
 
         cat("Starting colocboost analysis for v39 genes...\n")
+        cat("Analysis modes:\n")
+        cat("  xqtl_coloc:", run_xqtl_only, "\n")
+        cat("  joint_gwas:", run_joint_gwas, "\n")
+        cat("  separate_gwas:", run_separate_gwas, "\n")
         analysis_start_time_v39 <- Sys.time()
         res_v39 <- colocboost_analysis_pipeline(
             region_data_v39,
@@ -412,7 +496,7 @@ if (run_v39) {
             pip_cutoff_to_skip_sumstat = rep(-1, length(gwas_phenotype_list)),
             qc_method = c("rss_qc"), 
             maf_cutoff=maf_cutoff, 
-            xqtl_coloc = run_xqtl,
+            xqtl_coloc = run_xqtl_only,
             joint_gwas = run_joint_gwas,
             separate_gwas = run_separate_gwas
         )

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o nounset -o errexit
+set -o nounset -o errexit -o xtrace
 
 # Source the config file
 CONFIG_FILE="${1:-}"

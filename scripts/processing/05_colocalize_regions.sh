@@ -106,7 +106,7 @@ strong_only=${strong_only:-FALSE}
 p_threshold=${p_threshold:-5e-8}
 
 # Activate pixi environment to get tabix and other tools
-source <(pixi shell-hook --environment pecotmr --manifest-path "${code_dir}/pixi.toml")
+source <(pixi shell-hook --environment pecotmr-dev --manifest-path "${code_dir}/pixi.toml")
 
 
 # Get LD region - either from parameter or from ld_region_list using SLURM_ARRAY_TASK_ID
@@ -206,29 +206,23 @@ fi
 
 echo $(date +"[%b %d %H:%M:%S] Running colocboost with and without v39 genes on region ${ld_region}")
 
-# Read tissue IDs
-tissue_ids=($(cat "${tissue_id_list}"))
+# Read tissue IDs (preserving spaces in tissue names)
+mapfile -t tissue_ids < "${tissue_id_list}"
 
 # Unified colocboost processing function
 process_colocboost() {
     if [ "${multi_tissue}" = "TRUE" ] || [ "${multi_tissue}" = "true" ]; then
         echo "Processing multi tissue for region ${ld_region}"
         
-        # Copy data to local storage
-        local_genotype_stem="${working_dir}/genotype"
-        local_expression_dir="${working_dir}/expression"
-        local_covariate_dir="${working_dir}/covariates"
-        
-        rsync -PrhLtv "${genotype_stem}"* "${local_genotype_stem}"
-        rsync -PrhLtv "${expression_dir}"/* "${local_expression_dir}/"
-        rsync -PrhLtv "${covariate_dir}"/* "${local_covariate_dir}/"
-        
-        # Prepare aggregated files
+        # Use original paths directly (files read once, network I/O acceptable, avoids rsync overhead)
+        # Prepare aggregated files using original paths
         gene_bed_list_all="${working_dir}/all_tissues.gene_bed_list.txt"
         covariate_list_all="${working_dir}/all_tissues.covariate_list.txt"
         
-        printf "%s\n" "${tissue_ids[@]}" | sed "s|^|${local_expression_dir}/|;s|\$|.v11.normalized_expression.bed.gz|" > "${gene_bed_list_all}"
-        printf "%s\n" "${tissue_ids[@]}" | sed "s|^|${local_covariate_dir}/|;s|\$|.v11.covariates.txt|" > "${covariate_list_all}"
+        printf "%s\n" "${tissue_ids[@]}" | sed "s|^|${expression_dir}/|;s|\$|.v11.normalized_expression.bed.gz|" > "${gene_bed_list_all}"
+        printf "%s\n" "${tissue_ids[@]}" | sed "s|^|${covariate_dir}/|;s|\$|.v11.covariates.txt|" > "${covariate_list_all}"
+        conditions_list_individual_all="${working_dir}/all_tissues.conditions_list_individual.txt"
+        printf "%s\n" "${tissue_ids[@]}" > "${conditions_list_individual_all}"
         
         echo "Running colocboost aggregated on LD region ${ld_region} across all tissues"
         
@@ -241,9 +235,9 @@ process_colocboost() {
             --gene_bed_list \"${gene_bed_list_all}\" \
             --covariate_list \"${covariate_list_all}\" \
             --covariate_path none \
-            --genotype_stem \"${local_genotype_stem}\" \
+            --conditions_list_individual \"${conditions_list_individual_all}\" \
+            --genotype_stem \"${genotype_stem}\" \
             --v39_gene_id_path \"${all_v39_genes_path}\" \
-            --multi_tissue \"${multi_tissue}\" \
             --run_v39 \"${run_v39}\" \
             --run_individual \"${run_individual}\" \
             --run_xqtl_only \"${run_xqtl_only}\" \
@@ -277,29 +271,25 @@ process_colocboost() {
         # Define unified process_tissue function
         process_tissue() {
             local tissue_id="${1}"
-            local local_genotype_stem="${working_dir}/genotype"
-            local local_expression_dir="${working_dir}/expression"
-            local local_covariate_dir="${working_dir}/covariates"
-            
-            # Copy data to local storage
-            rsync -PrhLtv "${genotype_stem}"* "${local_genotype_stem}"
-            rsync -PrhLtv "${expression_dir}/${tissue_id}"* "${local_expression_dir}/"
-            rsync -PrhLtv "${covariate_dir}/${tissue_id}"* "${local_covariate_dir}/"
             
             echo "Running colocboost on LD region ${ld_region} in tissue ${tissue_id}"
             
             # Build base command
+            # Create conditions_list_individual file for single tissue
+            conditions_list_individual_file="${working_dir}/${tissue_id}.conditions_list_individual.txt"
+            echo "${tissue_id}" > "${conditions_list_individual_file}"
+            
             local cmd="${code_dir}/run_05_colocboost_compare.sh \
                 --tissue_id \"${tissue_id}\" \
                 --ld_region \"${ld_region}\" \
                 --association_region \"${ld_region}\" \
                 --gene_region \"${ld_region}\" \
-                --gene_bed_list \"${local_expression_dir}/${tissue_id}.v11.normalized_expression.bed.gz\" \
-                --covariate_list \"${local_covariate_dir}/${tissue_id}.v11.covariates.txt\" \
+                --gene_bed_list \"${expression_dir}/${tissue_id}.v11.normalized_expression.bed.gz\" \
+                --covariate_list \"${covariate_dir}/${tissue_id}.v11.covariates.txt\" \
                 --covariate_path none \
-                --genotype_stem \"${local_genotype_stem}\" \
+                --conditions_list_individual \"${conditions_list_individual_file}\" \
+                --genotype_stem \"${genotype_stem}\" \
                 --v39_gene_id_path \"${all_v39_genes_path}\" \
-                --multi_tissue \"${multi_tissue}\" \
                 --run_v39 \"${run_v39}\" \
                 --run_individual \"${run_individual}\" \
                 --run_xqtl_only \"${run_xqtl_only}\" \

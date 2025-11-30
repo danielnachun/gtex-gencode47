@@ -19,3 +19,12 @@ pecotmr
 
 .vscode/*
 *.png
+
+# core dump files
+core.*
+
+# large R data files
+*.rds
+
+# R subread temporary files
+.Rsubread_UserProvidedAnnotation_pid*
