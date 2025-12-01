@@ -38,6 +38,11 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix, verbose = TRUE)
 
   # Helper to get robust and write out
   process_and_write <- function(res, prefix, verbose = TRUE) {
+    # Extract credible sets from original (non-robust) results and write out
+    cs_df_original <- extract_colocboost_sets(res)
+    outfile_original <- paste0(prefix, ".txt")
+    write_cs_table(cs_df_original, outfile_original, verbose = verbose)
+    
     # Get robust colocalization
     robust_res <- suppressWarnings(colocboost::get_robust_colocalization(
       res,
@@ -48,10 +53,10 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix, verbose = TRUE)
       coverage = 0.95
     ))
     
-    # Extract credible sets and write out
-    cs_df <- extract_credible_sets(robust_res, verbose = verbose, include_conversion_metadata = FALSE)
-    outfile <- paste0(prefix, ".robust.txt")
-    write_cs_table(cs_df, outfile, verbose = verbose)
+    # Extract credible sets from robust results and write out
+    cs_df_robust <- extract_colocboost_sets(robust_res)
+    outfile_robust <- paste0(prefix, ".robust.txt")
+    write_cs_table(cs_df_robust, outfile_robust, verbose = verbose)
   }
 
   if (is.list(obj) && !is.null(obj$xqtl_coloc)) {
@@ -90,359 +95,265 @@ format_colocboost <- function(pecotmr_colocboost, output_prefix, verbose = TRUE)
 # ----------------------------
 # Helpers
 # ----------------------------
-#' Extract credible sets information from a colocboost result object
+#' Extract colocboost credible sets into a long-format data.frame
 #'
-#' Expects an object with fields similar to those produced by colocboost_analysis_pipeline:
-#' - data_info$variables
-#' - data_info$z (list of z-score vectors per outcome)
-#' - data_info$outcome_info$outcome_names
-#' - ucos_details and/or cos_details
-#' - cos_summary (for CoS-level metrics such as cos_npc)
-extract_credible_sets <- function(colocboost_result, verbose = TRUE, include_conversion_metadata = FALSE) {
-  trait_specific_cs <- list()
-  trait_shared_cs <- list()
-
-  # Precompute CoS-level map for cos_npc if available
-  cos_npc_map <- NULL
-  if (!is.null(colocboost_result$cos_summary)) {
-    cs <- colocboost_result$cos_summary
-    if (!is.null(cs$cos_id) && !is.null(cs$cos_npc)) {
-      cos_npc_map <- setNames(as.numeric(cs$cos_npc), cs$cos_id)
-    }
+#' @param cb_output A "colocboost" object, ideally after get_robust_colocalization()
+#' @param outcome_names Optional character vector giving outcome names in the
+#'   same order as Y used in the original analysis (overrides cb_output$data_info$outcome_info$outcome_names).
+#'
+#' @return data.frame with columns:
+#'   phenotype_id, variant_id, cs_id, cs_type ("cos" or "ucos"),
+#'   vcp (NA for UCoS), cos_npc (NA for UCoS), npc_outcome (NA for UCoS),
+#'   ucos_weight (NA for CoS), cs_change (list for CoS with one value per outcome,
+#'   numeric for UCoS with single value), neg_log10_p_value (list for CoS, numeric for UCoS).
+extract_colocboost_sets <- function(cb_output, outcome_names = NULL) {
+  if (!inherits(cb_output, "colocboost")) {
+    stop("cb_output must be a 'colocboost' object")
   }
 
-  # Trait-specific credible sets (uCoS)
-  if (!is.null(colocboost_result$ucos_details)) {
-    if (verbose) cat("Available ucos_details fields:", names(colocboost_result$ucos_details), "\n")
-    ucos_variables <- colocboost_result$ucos_details$ucos$ucos_variables
-    ucos_outcomes  <- colocboost_result$ucos_details$ucos_outcomes$outcome_index
-    ucos_weights   <- colocboost_result$ucos_details$ucos_weight
+  # Global variant + outcome names
+  variables <- cb_output$data_info$variables
+  outcomes  <- cb_output$data_info$outcome_info$outcome_names
+  if (!is.null(outcome_names)) {
+    if (length(outcome_names) != length(outcomes)) {
+      stop("outcome_names length must match number of outcomes in cb_output$data_info$outcome_info$outcome_names")
+    }
+    outcomes <- outcome_names
+  }
 
-    for (i in seq_along(ucos_variables)) {
-      cs_name     <- names(ucos_variables)[i]
-      variants    <- ucos_variables[[i]]
-      outcome_idx <- ucos_outcomes[[i]]
+  rows <- list()
 
-      phenotype_names <- colocboost_result$data_info$outcome_info$outcome_names
-      phenotype_id    <- phenotype_names[outcome_idx]
+  ## -----------------------------
+  ## 1. Colocalized CoS (multi-trait)
+  ## -----------------------------
+  cd <- cb_output$cos_details
+  if (!is.null(cd) && !is.null(cd$cos$cos_index) && length(cd$cos$cos_index) > 0) {
+    cos_indices   <- cd$cos$cos_index
+    cos_variables <- cd$cos$cos_variables
+    cos_outcomes  <- cd$cos_outcomes$outcome_index
+    cos_npc       <- cd$cos_npc
+    cos_min_npc   <- cd$cos_min_npc_outcome
+    cos_vcp_list  <- cd$cos_vcp
+    cos_cs_change <- cd$cos_cs_change
 
-      all_variants   <- colocboost_result$data_info$variables
-      variant_indices <- match(variants, all_variants)
+    for (i in seq_along(cos_indices)) {
+      cs_name <- names(cos_indices)[i]
+      var_idx <- cos_indices[[i]]
+      if (length(var_idx) == 0) next
 
-      pip_values <- ucos_weights[[i]][variant_indices]
+      variant_id <- variables[var_idx]
 
-      # -log10(p) from z-scores
-      z_scores           <- colocboost_result$data_info$z[[outcome_idx]][variant_indices]
-      neg_log10_p_values <- -log10(2 * pnorm(-abs(z_scores)))
-      
-      # npc_outcome is not available for trait-specific credible sets
-      npc_outcome_values <- NA_real_
+      # Outcome IDs for this CoS (collapse to a single string)
+      out_idx <- cos_outcomes[[i]]
+      phenotype_id <- paste(outcomes[out_idx], collapse = ";")
 
-      # Check if this is a converted entry from a filtered trait_shared
-      cs_type <- "trait_specific"
-      original_cos_npc <- NA_real_
-      if (!is.null(colocboost_result$ucos_details$converted_from_shared) && 
-          length(colocboost_result$ucos_details$converted_from_shared) >= i &&
-          colocboost_result$ucos_details$converted_from_shared[[i]]) {
-        cs_type <- "trait_specific_from_shared"
-        # Get the original cos_npc value for converted entries
-        if (!is.null(colocboost_result$ucos_details$original_cos_npc) && 
-            length(colocboost_result$ucos_details$original_cos_npc) >= i) {
-          original_cos_npc <- colocboost_result$ucos_details$original_cos_npc[[i]]
-        }
-      }
-      
-      # Check for mismatched vector lengths before creating data.frame
-      if (length(variants) == 0) {
-        warning(paste("Skipping credible set", cs_name, "- empty variants vector"))
-        next
-      }
-      if (is.null(cs_name) || length(cs_name) == 0 || cs_name == "") {
-        warning(paste("Skipping credible set - empty or null cs_name"))
-        next
-      }
-      if (length(pip_values) != length(variants)) {
-        warning(paste("Skipping credible set", cs_name, "- pip_values length (", length(pip_values), ") != variants length (", length(variants), ")"))
-        next
-      }
-      if (length(neg_log10_p_values) != length(variants)) {
-        warning(paste("Skipping credible set", cs_name, "- neg_log10_p_values length (", length(neg_log10_p_values), ") != variants length (", length(variants), ")"))
-        next
-      }
-      
-      # Get additional metadata for converted entries
-      original_cos_id_value <- NA_character_
-      original_npc_outcome_value <- NA_real_
-      if (cs_type == "trait_specific_from_shared") {
-        if (!is.null(colocboost_result$ucos_details$original_cos_id) && 
-            length(colocboost_result$ucos_details$original_cos_id) >= i) {
-          original_cos_id_value <- colocboost_result$ucos_details$original_cos_id[[i]]
-        }
-        # Get the original npc_outcome value for converted entries
-        if (!is.null(colocboost_result$ucos_details$original_npc_outcome) && 
-            length(colocboost_result$ucos_details$original_npc_outcome) >= i) {
-          original_npc_outcome_value <- colocboost_result$ucos_details$original_npc_outcome[[i]]
-        }
-      }
-      
-      if (include_conversion_metadata) {
-        cs_df <- data.frame(
-          phenotype_id = rep(phenotype_id, length(variants)),
-          variant_id    = variants,
-          pip           = pip_values,
-          neg_log10_p_value = neg_log10_p_values,
-          cs_id         = rep(cs_name, length(variants)),
-          cs_type       = cs_type,
-          cos_npc       = if (cs_type == "trait_specific_from_shared") rep(original_cos_npc, length(variants)) else rep(NA_real_, length(variants)),
-          npc_outcome   = rep(npc_outcome_values, length(variants)),
-          original_cos_id = if (cs_type == "trait_specific_from_shared") rep(original_cos_id_value, length(variants)) else rep(NA_character_, length(variants)),
-          original_cos_npc = if (cs_type == "trait_specific_from_shared") rep(original_cos_npc, length(variants)) else rep(NA_real_, length(variants)),
-          original_npc_outcome = if (cs_type == "trait_specific_from_shared") rep(original_npc_outcome_value, length(variants)) else rep(NA_real_, length(variants)),
-          converted_from_shared = rep(cs_type == "trait_specific_from_shared", length(variants)),
-          stringsAsFactors = FALSE
-        )
+      # Variant-level colocalization probability (VCP) for this CoS
+      vcp_vec <- cos_vcp_list[[i]]
+      # vcp_vec is over all variants; subset to this CoS' indices if necessary
+      if (length(vcp_vec) == length(variables)) {
+        vcp <- vcp_vec[var_idx]
+      } else if (length(vcp_vec) == length(var_idx)) {
+        vcp <- vcp_vec
       } else {
-        cs_df <- data.frame(
-          phenotype_id = rep(phenotype_id, length(variants)),
-          variant_id    = variants,
-          pip           = pip_values,
-          neg_log10_p_value = neg_log10_p_values,
-          cs_id         = rep(cs_name, length(variants)),
-          cs_type       = "trait_specific",  # Always use standard cs_type for non-robust
-          cos_npc       = NA_real_,
-          npc_outcome   = rep(npc_outcome_values, length(variants)),
-          original_npc_outcome = NA_real_,  # Not available for non-converted entries
-          stringsAsFactors = FALSE
-        )
+        # Fallback: length mismatch, fill with NA
+        vcp <- rep(NA_real_, length(var_idx))
       }
 
-      trait_specific_cs[[length(trait_specific_cs) + 1]] <- cs_df
-    }
-  }
+      cos_npc_val      <- as.numeric(cos_npc[i])
+      npc_outcome_val  <- as.numeric(cos_min_npc[i])
 
-  # Trait-shared credible sets (CoS)
-  if (!is.null(colocboost_result$cos_details)) {
-    if (verbose) cat("Available cos_details fields:", names(colocboost_result$cos_details), "\n")
-    cos_variables <- colocboost_result$cos_details$cos$cos_variables
-    cos_outcomes  <- colocboost_result$cos_details$cos_outcomes$outcome_index
-    cos_weights   <- colocboost_result$cos_details$cos_vcp
+      # Extract cs_change values for all outcomes in this CoS
+      cs_change_values <- rep(NA_real_, length(out_idx))
+      if (!is.null(cos_cs_change) && cs_name %in% rownames(cos_cs_change)) {
+        cs_change_row <- cos_cs_change[cs_name, , drop = FALSE]
+        for (j in seq_along(out_idx)) {
+          outcome_idx <- out_idx[j]
+          outcome_name <- outcomes[outcome_idx]
+          # Try to get cs_change by outcome name first, then by index
+          if (outcome_name %in% colnames(cs_change_row)) {
+            cs_change_values[j] <- as.numeric(cs_change_row[1, outcome_name])
+          } else if (as.character(outcome_idx) %in% colnames(cs_change_row)) {
+            cs_change_values[j] <- as.numeric(cs_change_row[1, as.character(outcome_idx)])
+          } else if (outcome_idx <= ncol(cs_change_row)) {
+            cs_change_values[j] <- as.numeric(cs_change_row[1, outcome_idx])
+          }
+        }
+      }
+      # For CoS, cs_change is a list with one value per outcome (same order as phenotype_id)
+      cs_change_list <- rep(list(cs_change_values), length(var_idx))
 
-    for (i in seq_along(cos_variables)) {
-      cs_name         <- names(cos_variables)[i]
-      variants        <- cos_variables[[i]]
-      outcome_indices <- cos_outcomes[[i]]
-
-      phenotype_names <- colocboost_result$data_info$outcome_info$outcome_names
-      phenotype_ids   <- phenotype_names[outcome_indices]
-
-      all_variants     <- colocboost_result$data_info$variables
-      variant_indices  <- match(variants, all_variants)
-      pip_values       <- cos_weights[[i]][variant_indices]
-
-      # For each variant, collect -log10(p) across outcomes in this CoS
-      variant_neg_log10_p_values_list <- vector("list", length(variants))
-      for (v in seq_along(variants)) {
-        values_for_variant <- numeric(length(outcome_indices))
-        for (j in seq_along(outcome_indices)) {
-          outcome_idx <- outcome_indices[j]
-          z_scores <- colocboost_result$data_info$z[[outcome_idx]][variant_indices]
+      # Compute -log10(p) for each variant across outcomes in this CoS
+      # For CoS, we have multiple outcomes, so store as a list
+      variant_neg_log10_p_values_list <- vector("list", length(var_idx))
+      for (v in seq_along(var_idx)) {
+        values_for_variant <- numeric(length(out_idx))
+        for (j in seq_along(out_idx)) {
+          outcome_idx <- out_idx[j]
+          z_scores <- cb_output$data_info$z[[outcome_idx]][var_idx]
           neg_log10_p_values <- -log10(2 * pnorm(-abs(z_scores)))
           values_for_variant[j] <- neg_log10_p_values[v]
         }
         variant_neg_log10_p_values_list[[v]] <- values_for_variant
       }
 
-      # Map cos_npc from cos_summary by cs_name if available
-      cs_cos_npc <- NA_real_
-      if (!is.null(cos_npc_map) && !is.null(cos_npc_map[[cs_name]])) {
-        cs_cos_npc <- as.numeric(cos_npc_map[[cs_name]])
-      }
-      
-      # Extract npc_outcome for trait-shared credible sets from cos_outcomes_npc
-      # For trait-shared credible sets, we need to match each variant to its corresponding npc_outcome values
-      # The npc_outcome values must be ordered to match the phenotype order in phenotype_ids
-      variant_npc_outcome_list <- vector("list", length(variants))
-      
-      # Try to find npc_outcome data - first try the current cs_name, then try original names
-      cos_npc_data <- NULL
-      npc_source_name <- cs_name
-      
-      if (!is.null(colocboost_result$cos_details$cos_outcomes_npc) && 
-          !is.null(colocboost_result$cos_details$cos_outcomes_npc[[cs_name]])) {
-        cos_npc_data <- colocboost_result$cos_details$cos_outcomes_npc[[cs_name]]
-      } else {
-        # Try to find npc_outcome data under original colocalization names
-        # Look for names that contain the same cos number and outcomes
-        if (!is.null(colocboost_result$cos_details$cos_outcomes_npc)) {
-          available_npc_names <- names(colocboost_result$cos_details$cos_outcomes_npc)
-          # Extract cos number from current name (e.g., "cos2:y85_y86_y87" -> "cos2")
-          cos_number <- sub(":.*", "", cs_name)
-          # Find original names that start with the same cos number
-          matching_names <- available_npc_names[grepl(paste0("^", cos_number, ":"), available_npc_names)]
-          
-          if (length(matching_names) > 0) {
-            # Use the first matching name (there should typically be only one)
-            npc_source_name <- matching_names[1]
-            cos_npc_data <- colocboost_result$cos_details$cos_outcomes_npc[[npc_source_name]]
-            if (verbose) cat("Found npc_outcome data under original name:", npc_source_name, "\n")
-          }
-        }
-      }
-      
-      if (!is.null(cos_npc_data) && !is.null(cos_npc_data$npc_outcome)) {
-        # Reorder npc_outcome values to match the phenotype order in outcome_indices
-        # cos_npc_data$outcomes_index gives the original order, we need to reorder to match outcome_indices
-        npc_reordered <- cos_npc_data$npc_outcome[match(outcome_indices, cos_npc_data$outcomes_index)]
-        
-        # For trait-shared credible sets, each variant gets the reordered npc_outcome values
-        for (v in seq_along(variants)) {
-          variant_npc_outcome_list[[v]] <- npc_reordered
-        }
-        if (verbose) cat("Found npc_outcome for cos", cs_name, ":", paste(npc_reordered, collapse = ", "), "\n")
-      } else {
-        if (verbose) cat("npc_outcome not found for cos", cs_name, "\n")
-        # Fill with NA values if not found
-        for (v in seq_along(variants)) {
-          variant_npc_outcome_list[[v]] <- rep(NA_real_, length(outcome_indices))
-        }
-      }
-
-      # Check for mismatched vector lengths before creating data.frame
-      if (length(variants) == 0) {
-        warning(paste("Skipping trait-shared credible set", cs_name, "- empty variants vector"))
-        next
-      }
-      if (is.null(cs_name) || length(cs_name) == 0 || cs_name == "") {
-        warning(paste("Skipping trait-shared credible set - empty or null cs_name"))
-        next
-      }
-      if (length(pip_values) != length(variants)) {
-        warning(paste("Skipping trait-shared credible set", cs_name, "- pip_values length (", length(pip_values), ") != variants length (", length(variants), ")"))
-        next
-      }
-      if (length(variant_neg_log10_p_values_list) != length(variants)) {
-        warning(paste("Skipping trait-shared credible set", cs_name, "- variant_neg_log10_p_values_list length (", length(variant_neg_log10_p_values_list), ") != variants length (", length(variants), ")"))
-        next
-      }
-      
-      if (include_conversion_metadata) {
-        cs_df <- data.frame(
-          phenotype_id = rep(paste(phenotype_ids, collapse = ","), length(variants)),
-          variant_id    = variants,
-          pip           = pip_values,
-          neg_log10_p_value = I(variant_neg_log10_p_values_list),
-          cs_id         = rep(cs_name, length(variants)),
-          cs_type       = "trait_shared",
-          cos_npc       = rep(cs_cos_npc, length(variants)),
-          npc_outcome   = I(variant_npc_outcome_list),
-          original_cos_id = rep(NA_character_, length(variants)),
-          original_cos_npc = rep(NA_real_, length(variants)),
-          converted_from_shared = rep(FALSE, length(variants)),
-          stringsAsFactors = FALSE
-        )
-      } else {
-        cs_df <- data.frame(
-          phenotype_id = rep(paste(phenotype_ids, collapse = ","), length(variants)),
-          variant_id    = variants,
-          pip           = pip_values,
-          neg_log10_p_value = I(variant_neg_log10_p_values_list),
-          cs_id         = rep(cs_name, length(variants)),
-          cs_type       = "trait_shared",
-          cos_npc       = rep(cs_cos_npc, length(variants)),
-          npc_outcome   = I(variant_npc_outcome_list),
-          stringsAsFactors = FALSE
-        )
-      }
-
-      trait_shared_cs[[length(trait_shared_cs) + 1]] <- cs_df
+      rows[[length(rows) + 1L]] <- data.frame(
+        phenotype_id = rep(phenotype_id, length(var_idx)),
+        variant_id   = variant_id,
+        cs_id        = rep(cs_name, length(var_idx)),
+        cs_type      = rep("cos",  length(var_idx)),
+        vcp          = vcp,
+        cos_npc      = rep(cos_npc_val,     length(var_idx)),
+        npc_outcome  = rep(npc_outcome_val, length(var_idx)),
+        ucos_weight  = rep(NA_real_,        length(var_idx)),
+        cs_change    = I(cs_change_list),
+        neg_log10_p_value = I(variant_neg_log10_p_values_list),
+        stringsAsFactors = FALSE
+      )
     }
   }
 
-  all_cs <- c(trait_specific_cs, trait_shared_cs)
-  if (length(all_cs) > 0) {
-    # Ensure all data frames have the same column structure before rbinding
-    if (include_conversion_metadata) {
-      # Standardize columns for conversion metadata case
-      all_cs <- lapply(all_cs, function(df) {
-        # Ensure all required columns exist
-        required_cols <- c("phenotype_id", "variant_id", "pip", "neg_log10_p_value", 
-                          "cs_id", "cs_type", "cos_npc", "npc_outcome", 
-                          "original_cos_id", "original_cos_npc", "original_npc_outcome", 
-                          "converted_from_shared")
-        
-        for (col in required_cols) {
-          if (!col %in% names(df)) {
-            if (col == "original_cos_id") {
-              df[[col]] <- NA_character_
-            } else if (col == "original_cos_npc" || col == "original_npc_outcome") {
-              df[[col]] <- NA_real_
-            } else if (col == "converted_from_shared") {
-              df[[col]] <- FALSE
+  ## -----------------------------
+  ## 2. Trait-specific UCoS
+  ## -----------------------------
+  ud <- cb_output$ucos_details
+  if (!is.null(ud) &&
+      !is.null(ud$ucos$ucos_index) &&
+      length(ud$ucos$ucos_index) > 0) {
+
+    ucos_indices   <- ud$ucos$ucos_index
+    ucos_variables <- ud$ucos$ucos_variables
+    ucos_outcomes  <- ud$ucos_outcomes
+    ucos_weights   <- ud$ucos_weight
+    ucos_cs_change <- ud$ucos_outcomes_delta
+
+    for (j in seq_along(ucos_indices)) {
+      u_name  <- names(ucos_indices)[j]
+      var_idx <- ucos_indices[[j]]
+      if (length(var_idx) == 0) next
+
+      variant_id <- variables[var_idx]
+
+      # Each UCoS should be for a single outcome; extract outcome name or index
+      # outcome_index and outcome_name are both lists where each element is a list
+      out_idx_list <- ucos_outcomes$outcome_index[[j]]
+      out_name_list <- ucos_outcomes$outcome_name[[j]]
+      
+      # Try to get outcome name first (more reliable)
+      if (!is.null(out_name_list) && length(out_name_list) > 0) {
+        phenotype_id <- out_name_list[[1]]
+        # Get corresponding index
+        if (!is.null(out_idx_list) && length(out_idx_list) > 0) {
+          out_idx <- out_idx_list[[1]]
+        } else {
+          # Try to find index from name
+          out_idx <- match(phenotype_id, outcomes)
+        }
+      } else if (!is.null(out_idx_list) && length(out_idx_list) > 0) {
+        # Fall back to index if name not available
+        out_idx <- out_idx_list[[1]]
+        if (out_idx >= 1 && out_idx <= length(outcomes)) {
+          phenotype_id <- outcomes[out_idx]
+        } else {
+          phenotype_id <- NA_character_
+        }
+      } else {
+        phenotype_id <- NA_character_
+        out_idx <- NA_integer_
+      }
+
+      # UCoS weights: typically a matrix (variants x 1 outcome)
+      w <- ucos_weights[[j]]
+      w_vec <- as.numeric(w)
+      if (length(w_vec) != length(var_idx)) {
+        # Length mismatch: be explicit
+        w_vec <- rep(NA_real_, length(var_idx))
+      }
+
+      # Extract cs_change for this UCoS (single value)
+      cs_change_val <- NA_real_
+      if (!is.null(ucos_cs_change) && is.data.frame(ucos_cs_change) && 
+          "ucos_outcome" %in% colnames(ucos_cs_change) && 
+          "ucos_delta" %in% colnames(ucos_cs_change)) {
+        # Match by outcome name (phenotype_id)
+        if (!is.na(phenotype_id) && phenotype_id %in% ucos_cs_change$ucos_outcome) {
+          match_idx <- which(ucos_cs_change$ucos_outcome == phenotype_id)
+          if (length(match_idx) > 0) {
+            # Take the first match (or if multiple UCoS for same outcome, match by position)
+            # Since we iterate in order, try to match by position j
+            if (j <= nrow(ucos_cs_change) && length(match_idx) > 1) {
+              # Try to find a match that hasn't been used yet by checking previous iterations
+              used_indices <- c()
+              for (k in seq_len(j - 1)) {
+                prev_outcome <- NULL
+                # Try to get outcome name first
+                if (!is.null(ucos_outcomes$outcome_name[[k]]) && length(ucos_outcomes$outcome_name[[k]]) > 0) {
+                  prev_outcome <- ucos_outcomes$outcome_name[[k]][[1]]
+                } else if (!is.null(ucos_outcomes$outcome_index[[k]]) && length(ucos_outcomes$outcome_index[[k]]) > 0) {
+                  prev_idx <- ucos_outcomes$outcome_index[[k]][[1]]
+                  if (prev_idx >= 1 && prev_idx <= length(outcomes)) {
+                    prev_outcome <- outcomes[prev_idx]
+                  }
+                }
+                if (!is.null(prev_outcome) && prev_outcome == phenotype_id) {
+                  prev_match <- which(ucos_cs_change$ucos_outcome == prev_outcome)
+                  if (length(prev_match) > 0) {
+                    used_indices <- c(used_indices, prev_match[1])
+                  }
+                }
+              }
+              available_idx <- setdiff(match_idx, used_indices)
+              if (length(available_idx) > 0) {
+                cs_change_val <- as.numeric(ucos_cs_change$ucos_delta[available_idx[1]])
+              } else {
+                cs_change_val <- as.numeric(ucos_cs_change$ucos_delta[match_idx[1]])
+              }
             } else {
-              df[[col]] <- NA
+              cs_change_val <- as.numeric(ucos_cs_change$ucos_delta[match_idx[1]])
             }
           }
         }
-        
-        # Reorder columns to match expected order
-        df <- df[, required_cols, drop = FALSE]
-        return(df)
-      })
-    } else {
-      # Standardize columns for non-conversion metadata case
-      all_cs <- lapply(all_cs, function(df) {
-        # Ensure all required columns exist
-        required_cols <- c("phenotype_id", "variant_id", "pip", "neg_log10_p_value", 
-                          "cs_id", "cs_type", "cos_npc", "npc_outcome")
-        
-        for (col in required_cols) {
-          if (!col %in% names(df)) {
-            if (col == "cos_npc") {
-              df[[col]] <- NA_real_
-            } else {
-              df[[col]] <- NA
-            }
-          }
-        }
-        
-        # Reorder columns to match expected order
-        df <- df[, required_cols, drop = FALSE]
-        return(df)
-      })
-    }
-    
-    result_df <- do.call(rbind, all_cs)
-    return(result_df)
-  } else {
-    if (include_conversion_metadata) {
-      return(data.frame(
-        phenotype_id = character(0),
-        variant_id = character(0),
-        pip = numeric(0),
-        neg_log10_p_value = list(),
-        cs_id = character(0),
-        cs_type = character(0),
-        cos_npc = numeric(0),
-        npc_outcome = numeric(0),
-        original_cos_id = character(0),
-        original_cos_npc = numeric(0),
-        converted_from_shared = logical(0),
+      }
+
+      # Compute -log10(p) for uCoS (single outcome)
+      neg_log10_p_values <- rep(NA_real_, length(var_idx))
+      if (!is.null(cb_output$data_info$z) && !is.na(out_idx) && length(cb_output$data_info$z) >= out_idx) {
+        z_scores <- cb_output$data_info$z[[out_idx]][var_idx]
+        neg_log10_p_values <- -log10(2 * pnorm(-abs(z_scores)))
+      }
+
+      rows[[length(rows) + 1L]] <- data.frame(
+        phenotype_id = rep(phenotype_id, length(var_idx)),
+        variant_id   = variant_id,
+        cs_id        = rep(u_name, length(var_idx)),
+        cs_type      = rep("ucos", length(var_idx)),
+        vcp          = rep(NA_real_, length(var_idx)),
+        cos_npc      = rep(NA_real_, length(var_idx)),
+        npc_outcome  = rep(NA_real_, length(var_idx)),
+        ucos_weight  = w_vec,
+        cs_change    = rep(cs_change_val, length(var_idx)),
+        neg_log10_p_value = neg_log10_p_values,
         stringsAsFactors = FALSE
-      ))
-    } else {
-      return(data.frame(
-        phenotype_id = character(0),
-        variant_id = character(0),
-        pip = numeric(0),
-        neg_log10_p_value = list(),
-        cs_id = character(0),
-        cs_type = character(0),
-        cos_npc = numeric(0),
-        npc_outcome = numeric(0),
-        stringsAsFactors = FALSE
-      ))
+      )
     }
   }
+
+  if (length(rows) == 0) {
+    return(data.frame(
+      phenotype_id = character(0),
+      variant_id   = character(0),
+      cs_id        = character(0),
+      cs_type      = character(0),
+      vcp          = numeric(0),
+      cos_npc      = numeric(0),
+      npc_outcome  = numeric(0),
+      ucos_weight  = numeric(0),
+      cs_change    = numeric(0),
+      neg_log10_p_value = numeric(0),
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  do.call(rbind, rows)
 }
 
 ## The helpers below are used by both the function and CLI
@@ -473,7 +384,26 @@ write_cs_table <- function(cs_df, outfile, verbose = TRUE) {
       cs_df$npc_outcome <- signif(as.numeric(cs_df$npc_outcome), 6)
     }
     
-    cs_df$pip <- signif(as.numeric(cs_df$pip), 8)
+    # Format vcp and ucos_weight if present
+    if ("vcp" %in% names(cs_df)) {
+      cs_df$vcp <- signif(as.numeric(cs_df$vcp), 8)
+    }
+    if ("ucos_weight" %in% names(cs_df)) {
+      cs_df$ucos_weight <- signif(as.numeric(cs_df$ucos_weight), 8)
+    }
+    
+    # Handle cs_change if it's a list (for CoS)
+    if ("cs_change" %in% names(cs_df)) {
+      if (is.list(cs_df$cs_change)) {
+        cs_df$cs_change <- vapply(
+          cs_df$cs_change,
+          function(x) toString(signif(as.numeric(x), 6)),
+          character(1)
+        )
+      } else {
+        cs_df$cs_change <- signif(as.numeric(cs_df$cs_change), 6)
+      }
+    }
   }
 
   outdir <- dirname(outfile)
